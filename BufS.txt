@@ -1,0 +1,40 @@
+system		BUF;
+
+#DEFINE N 3
+#DEFINE M 3
+#DEFINE K 3
+
+server:		buf(agents Aprod[N],Acons[M];servers Sprod[N],Scons[M]),  
+services	{put, get},
+states		{elem0,elem[K]},								
+actions{<i=1..N>{Aprod[i].buf.put, buf.elem0}		-> {Aprod[i].Sprod[i].ok_put, buf.elem[1]},			
+	<i=1..N><j=1..K-1>{Aprod[i].buf.put, buf.elem[j]}-> {Aprod[i].Sprod[i].ok_put, buf.elem[j+1]},	
+	<i=1..M><j=2..K>{Acons[i].buf.get, buf.elem[j]}	-> {Acons[i].Scons[i].ok_get, buf.elem[j-1]},	
+	<i=1..M>{Acons[i].buf.get, buf.elem[1]}		-> {Acons[i].Scons[i].ok_get, buf.elem0}
+}
+
+server:		Sprod(agents Aprod;servers buf),
+services	{doSth,ok_put}
+states		{neutral,prod}
+actions	{	{Aprod.Sprod.doSth, Sprod.neutral} 	-> {Aprod.buf.put, Sprod.prod}
+		{Aprod.Sprod.ok_put, Sprod.prod}	-> {Aprod.Sprod.doSth, Sprod.neutral}
+}
+
+server:		Scons(agents Acons;servers buf),
+services	{doSth,ok_get}
+states		{neutral,cons}
+actions	{	{Acons.Scons.doSth, Scons.neutral}	-> {Acons.buf.get, Scons.cons}
+		{Acons.Scons.ok_get, Scons.cons}	-> {Acons.Scons.doSth, Scons.neutral}
+}
+
+servers 	buf,Sprod[N],Scons[M];
+agents	 	Aprod[N],Acons[M];	
+ 
+init	->	{ 
+		<j=1..N>Sprod[j](Aprod[j],buf).neutral,
+		<j=1..M>Scons[j](Acons[j],buf).neutral,
+	  	buf(Aprod[1..N],Acons[1..M],Sprod[1..N],Scons[1..M]).elem0,
+
+		<j=1..N>Aprod[j].Sprod[j].doSth, 			
+	  	<j=1..M>Acons[j].Scons[j].doSth,
+	}.		
