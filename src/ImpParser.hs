@@ -4,6 +4,7 @@ module ImpParser where
 import Text.Parsec
 import qualified Text.Parsec.Language as L
 import qualified Text.Parsec.Token as T
+import Text.Parsec.Expr (buildExpressionParser, Assoc(..), Operator(..))
 import qualified Data.Set as S
 import qualified Data.Map as M
 
@@ -39,7 +40,12 @@ transition = do
     assignments <- braces (assign `sepBy1` comma)
     return $ Transition message pred assignments
 
-predicate = Cmp <$> expr <*> cmpOp <*> expr
+predicate = buildExpressionParser
+    [ [Infix (reservedOp "||" *> pure Or) AssocLeft]
+    , [Infix (reservedOp "&&" *> pure And) AssocLeft]
+    ] cmpExpr
+
+cmpExpr = Cmp <$> expr <*> cmpOp <*> expr
 
 assign = (,) <$> identifier <*> (reservedOp "=" *> expr)
 
@@ -48,6 +54,21 @@ cmpOp =
   <|> pure LessThan <* reservedOp "<"
   <|> pure GreaterThan <* reservedOp ">"
 
-expr = Var <$> identifier <|> (Lit . Int) <$> natural
+additiveOp =
+      pure Plus <* reservedOp "+"
+  <|> pure Minus <* reservedOp "-"
 
-main = getContents >>= print . parse server ""
+expr = buildExpressionParser table term <?> "expression"
+table = [ [Infix (flip BinOp <$> additiveOp) AssocLeft] ]
+
+term = Var <$> identifier <|> (Lit . Int) <$> natural
+
+main = getContents >>= process
+
+process file =
+    case parse server "" file of
+      Left err -> putStrLn $ "Syntax error: " ++ show err
+      Right srv ->
+        case compileTransitions srv of
+          Left err -> putStrLn $ "Error: " ++ show err
+          Right transitions -> mapM_ print transitions

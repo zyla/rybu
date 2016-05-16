@@ -44,8 +44,10 @@ allStates vars =
 data Predicate = Cmp Expr CmpOp Expr | And Predicate Predicate | Or Predicate Predicate | BoolLit Bool deriving (Show)
 data CmpOp = Equal | LessThan | GreaterThan deriving (Show)
 
-data Expr = Var Symbol | Lit Value -- | Plus, Minus...
+data Expr = Var Symbol | Lit Value | BinOp Expr BinOp Expr
   deriving (Show)
+
+data BinOp = Plus | Minus deriving (Show)
 
 data EvalErr = UndefinedSymbol Symbol | TypeMismatch deriving (Show)
 
@@ -70,6 +72,11 @@ evalExpr env (Var var) =
         Just val -> pure val
         Nothing -> err (UndefinedSymbol var)
 evalExpr env (Lit val) = pure val
+evalExpr env (BinOp e1 op e2) = join $ evalBinOp op <$> evalExpr env e1 <*> evalExpr env e2
+  where
+    evalBinOp Plus (Int i1) (Int i2) = pure $ Int (i1 + i2)
+    evalBinOp Minus (Int i1) (Int i2) = pure $ Int (i1 - i2)
+    evalBinOp _ _ _ = err TypeMismatch
 
 symbols :: TypeEnv -> Env
 symbols = M.fromList . concatMap varSyms . M.toList
