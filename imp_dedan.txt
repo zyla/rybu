@@ -5,8 +5,11 @@ server buf_with_sem {
     {put | state = down && count < 3} -> {count = count + 1}
     {get | state = down && count > 0} -> {count = count - 1}
 
-    {p | state = up} -> {state = down}
+    {p | state = up} -> {ok; state = down}
     {v} -> {state = up}
+
+    {empty | count = 0} -> {true}
+    {empty | count > 0} -> {false}
 }
 
 server semaphore {

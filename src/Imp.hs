@@ -1,6 +1,7 @@
 module Imp where
 
 import Control.Monad (join, filterM)
+import Data.Maybe (fromMaybe)
 import Data.List (intercalate)
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -14,7 +15,7 @@ data Value = Sym Symbol | Int Integer deriving (Eq, Show)
 type Env = M.Map Symbol Value
 type TypeEnv = M.Map Symbol Type
 
-data Transition = Transition Symbol Predicate [(Symbol, Expr)] deriving (Show)
+data Transition = Transition Symbol Predicate (Maybe Symbol) [(Symbol, Expr)] deriving (Show)
 
 data Server = Server
     { server_vars :: TypeEnv
@@ -91,18 +92,20 @@ matchingStates pred types =
     in filterM matches (allStates $ M.toList types)
 
 
-compileTransitions :: Server -> Either EvalErr [(Symbol, String, String)]
+compileTransitions :: Server -> Either EvalErr [(Symbol, String, Symbol, String)]
 compileTransitions (Server vars transitions) = concat <$> mapM compileTransition transitions
   where
     encode = encodeState . M.toList
     syms = symbols vars
 
-    compileTransition :: Transition -> Either EvalErr [(Symbol, String, String)]
-    compileTransition (Transition name pred assignment) = 
+    compileTransition :: Transition -> Either EvalErr [(Symbol, String, Symbol, String)]
+    compileTransition (Transition name pred maybeOutSignal assignment) = 
       let compileState state = do
             let env = M.union syms state
             updates <- (traverse . traverse) (evalExpr env) assignment
-            pure (name, encode state, encode (M.union (M.fromList updates) state))
+            pure (name, encode state, outSignal, encode (M.union (M.fromList updates) state))
+
+          outSignal = fromMaybe "ok" maybeOutSignal
             
 
       in matchingStates pred vars >>= mapM compileState

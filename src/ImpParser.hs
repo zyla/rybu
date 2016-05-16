@@ -37,8 +37,14 @@ transition = do
     (message, pred) <- braces $ (,) <$> identifier <*>
         (reservedOp "|" *> predicate <|> pure (BoolLit True))
     reservedOp "->"
-    assignments <- braces (assign `sepBy1` comma)
-    return $ Transition message pred assignments
+    (maybeOutSignal, assignments) <- try (braces retvalOnly) <|>
+        (braces $ do
+            maybeOutSignal <- optionMaybe (try $ identifier <* semicolon)
+            (,) maybeOutSignal <$> (assign `sepBy` comma))
+
+    return $ Transition message pred maybeOutSignal assignments
+  where
+    retvalOnly = flip (,) [] . Just <$> identifier
 
 predicate = buildExpressionParser
     [ [Infix (reservedOp "||" *> pure Or) AssocLeft]
