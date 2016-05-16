@@ -1,0 +1,34 @@
+server semaphore {
+    var state : {up, down};
+
+    {p | state = up} -> {state = down}
+
+    {v} -> {state = up}
+}
+
+server buf(size : int) {
+    var count : 0..size;
+
+    {put | count < size} -> {count = count + 1}
+    {get | count > 0} -> {count = count - 1}
+}
+
+var buf = buf(5) {count = 0};
+var mutex = semaphore {state=up};
+
+process producer() {
+    loop {
+        buf.put();
+    }
+}
+
+process consumer() {
+    loop {
+        buf.get();
+    }
+}
+
+spawn {
+    producer();
+    consumer();
+}
