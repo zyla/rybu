@@ -26,6 +26,7 @@ process producer() {
     }
 }
 
+-- input:
 process consumer() {
     loop {
         buf.p();
@@ -36,6 +37,27 @@ process consumer() {
         buf.v();
     }
 }
+
+-- output:
+initial: {buf.p, s0}
+{s0, ok} -> {buf.empty, s3}
+{s3, true} -> {buf.v, s9}
+{s3, false} -> {buf.get, s6}
+{s6, ok} -> {buf.v, s9}
+{s9, ok} -> {buf.p, s0}
+
+
+s0: goto s1;
+s1: match buf.p() { ok => goto s2; }
+s2: match buf.empty() { true => goto s3; false => goto s4; }
+s3: goto s5;
+s4: match buf.get() { ok => goto s5; }
+s5: match buf.v() { ok => goto s0; }
+
+s0: match buf.p() { ok => goto s1; }
+s1: match buf.empty() { true => goto s4; false => goto s3; }
+s3: match buf.get() { ok => goto s4; }
+s4: match buf.v() { ok => goto s0; }
 
 -- {ok | loop} -> {buf.p; buf_p}
 -- {ok | buf_p} -> {buf.empty; buf_empty}

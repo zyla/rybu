@@ -26,7 +26,7 @@ data Server = Server
 data Statement = Skip | Loop Statement | Block [Statement] | Msg Message | Match Message [(Symbol, Statement)]
     deriving (Show)
 
-data Message = Message Symbol Symbol deriving (Show)
+data Message = Message { message_server :: Symbol, message_msg :: Symbol } deriving (Show)
 
 data Process = Process
     { process_name :: Symbol
