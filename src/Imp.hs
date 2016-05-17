@@ -18,8 +18,24 @@ type TypeEnv = M.Map Symbol Type
 data Transition = Transition Symbol Predicate (Maybe Symbol) [(Symbol, Expr)] deriving (Show)
 
 data Server = Server
-    { server_vars :: TypeEnv
+    { server_name :: Symbol
+    , server_vars :: TypeEnv
     , server_transitions :: [Transition]
+    } deriving (Show)
+
+data Statement = Skip | Loop Statement | Block [Statement] | Msg Message | Match Message [(Symbol, Statement)]
+    deriving (Show)
+
+data Message = Message Symbol Symbol deriving (Show)
+
+data Process = Process
+    { process_name :: Symbol
+    , process_stmt :: Statement
+    } deriving (Show)
+
+data Model = Model
+    { model_servers :: [Server]
+    , model_procs :: [Process]
     } deriving (Show)
 
 encodeValue :: Value -> String
@@ -93,7 +109,9 @@ matchingStates pred types =
 
 
 compileTransitions :: Server -> Either EvalErr [(Symbol, String, Symbol, String)]
-compileTransitions (Server vars transitions) = concat <$> mapM compileTransition transitions
+compileTransitions Server {server_vars=vars, server_transitions=transitions} =
+    concat <$> mapM compileTransition transitions
+
   where
     encode = encodeState . M.toList
     syms = symbols vars

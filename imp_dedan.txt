@@ -20,9 +20,6 @@ server semaphore {
     {v} -> {state = up}
 }
 
-var buf = buf(5) {count = 0};
-var mutex = semaphore {state=up};
-
 process producer() {
     loop {
         buf.put();
@@ -31,9 +28,23 @@ process producer() {
 
 process consumer() {
     loop {
-        buf.get();
+        buf.p();
+        match buf.empty() {
+            true => skip;
+            false => buf.get();
+        }
+        buf.v();
     }
 }
+
+-- {ok | loop} -> {buf.p; buf_p}
+-- {ok | buf_p} -> {buf.empty; buf_empty}
+-- {true | buf_empty} -> {buf.v; loop}
+-- {false | buf_empty} -> {buf.get; buf_get}
+-- {ok | buf_get} -> {buf.v; loop}
+
+var buf = buf(5) {count = 0};
+var mutex = semaphore {state=up};
 
 spawn {
     producer();

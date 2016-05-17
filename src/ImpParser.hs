@@ -1,6 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 module ImpParser where
 
+import Control.Monad (forM_)
 import Text.Parsec
 import qualified Text.Parsec.Language as L
 import qualified Text.Parsec.Token as T
@@ -11,7 +12,7 @@ import qualified Data.Map as M
 import Imp
 
 T.TokenParser {..} = T.makeTokenParser L.haskellDef
-    { T.reservedNames = [ "server", "process", "var" ] }
+    { T.reservedNames = [ "server", "process", "var", "loop", "match" ] }
 
 semicolon = reservedOp ";"
 
@@ -23,7 +24,7 @@ server = do
         vars <- var `sepEndBy` semicolon
         transitions <- many transition
 
-        return $ Server (M.fromList vars) transitions
+        return $ Server name (M.fromList vars) transitions
 
 var = (,)
     <$> (reserved "var" *> identifier)
@@ -69,12 +70,44 @@ table = [ [Infix (flip BinOp <$> additiveOp) AssocLeft] ]
 
 term = Var <$> identifier <|> (Lit . Int) <$> natural
 
-main = getContents >>= process
+model = Model
+    <$> many server
+    <*> many process
 
-process file =
-    case parse server "" file of
-      Left err -> putStrLn $ "Syntax error: " ++ show err
-      Right srv ->
+process =
+  Process
+    <$> (reserved "process" *> identifier <* parens (pure ()))
+    <*> statement
+
+statement =
+      Block <$> braces (many statement)
+  <|> Loop <$> (reserved "loop" *> statement)
+  <|> (pure Skip <* reserved "skip" <* reservedOp ";")
+  <|> Msg <$> (message <* semicolon)
+  <|> Match <$> (reserved "match" *> message) <*> braces (many1 matchCase)
+
+matchCase = (,)
+    <$> identifier
+    <*> (reservedOp "=>" *> statement)
+  
+message = Message <$> identifier <*> (reservedOp "." *> identifier <* parens (pure ()))
+
+
+main = getContents >>= processModelFile
+
+processModelFile file =
+  case parse model "" file of
+
+    Left err ->
+      putStrLn $ "Syntax error: " ++ show err
+
+    Right Model{model_servers=servers, model_procs=procs} -> do
+
+      forM_ servers $ \srv -> do
+        putStrLn $ "server " ++ server_name srv
         case compileTransitions srv of
           Left err -> putStrLn $ "Error: " ++ show err
           Right transitions -> mapM_ print transitions
+
+      forM_ procs $ \proc -> do
+        putStrLn $ "process " ++ show proc
