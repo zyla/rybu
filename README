@@ -1,4 +1,4 @@
 Running:
 
     stack build
-    stack exec dedan < imp_dedan.txt
+    stack exec dedan < kolos.txt
