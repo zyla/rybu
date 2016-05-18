@@ -49,6 +49,30 @@ generateDedan Model{..} = execWriter $ do
 
         tellLn "};\n"
 
+
+    tell "agents "
+    tell $ intercalate ", " (map procAgentName procNames)
+    tellLn ";\n"
+
+    tell "servers "
+    tell $ intercalate ", " (map procServerName procNames ++ map siFormalParam model_serverInstances)
+    tellLn ";\n"
+
+    tellLn "init -> {"
+    forM_ model_serverInstances $ \(ServerInstance name _ initEnv) -> do
+        tells ["  ", name, "("]
+        tell $ intercalate "," (map procServerName procNames ++ map procAgentName procNames)
+        tells [").", encodeState (M.toList initEnv), ",\n"]
+
+    forM_ compiledProcs $ \(name, CompiledProc{..}) -> do
+        tells ["  ", procServerName name, "("]
+        tell $ intercalate "," (map si_name model_serverInstances ++ [procAgentName name])
+        tells [").", cp_initialState, ",\n"]
+
+        tells ["  ", procAgentName name, ".", message_server cp_initialMessage, ".", message_msg cp_initialMessage, ",\n"]
+
+    tellLn "}."
+
 siFormalParam ServerInstance{si_name=name, si_serverType=typ} = name ++ ": " ++ typ
 
 serverHeader serverName servers agents services states = do
