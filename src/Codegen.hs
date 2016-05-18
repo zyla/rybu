@@ -22,7 +22,7 @@ generateDedan Model{..} = execWriter $ do
 
         tellLn "actions {"
 
-        let Right ts = compileTransitions server
+        let ts = case compileTransitions server of Right x -> x; Left err -> error (show err)
 
         forM_ procNames $ \procName ->
             forM_ ts $ \(in_msg, in_state, out_msg, out_state) ->

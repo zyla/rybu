@@ -97,8 +97,11 @@ transitions g = concat <$> mapM toTransitions (M.toList g)
         mapM (\(reply, nextState) -> T state reply <$> lookupCont g nextState) actions
 
 
-encodeStateId :: StateId -> Symbol
-encodeStateId = ('s':) . show
+encodeStateId :: CFG -> StateId -> Symbol
+encodeStateId cfg stateId =
+    case lookupCont cfg stateId of
+        Right (_, Message s m) -> "s" ++ show stateId ++ "_" ++ s ++ "_" ++ m
+        Left _ -> "s" ++ show stateId
 
 data CompiledProc = CompiledProc
     { cp_states :: [Symbol]
@@ -113,17 +116,20 @@ data CompiledProc = CompiledProc
 totallyCompileProcess :: Statement -> Either CompileErr CompiledProc
 totallyCompileProcess stmt = do
     let ((initial, final), cfg) = compile $ desugar stmt
+
+        encodeT (T state input (nextState, message)) =
+            (encodeStateId cfg state, input, message, encodeStateId cfg nextState)
+
     ts <- transitions cfg
     (initialState, initialMessage) <- lookupCont cfg initial
 
     return CompiledProc
-        { cp_states = dedup $ map (encodeStateId . t_state) ts
+        { cp_states = dedup $ map (encodeStateId cfg . t_state) ts
         , cp_services = dedup $ map t_in_message ts
         , cp_usedServers = dedup $ map (message_server . snd . t_cont) ts
-        , cp_initialState = encodeStateId initialState
+        , cp_initialState = encodeStateId cfg initialState
         , cp_initialMessage = initialMessage
         , cp_transitions = map encodeT ts
         }
   where
     dedup = S.toList . S.fromList
-    encodeT (T state input (nextState, message)) = (encodeStateId state, input, message, encodeStateId nextState)
