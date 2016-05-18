@@ -1,0 +1,59 @@
+server semaphore {
+    var state : {up, down};
+
+    {p | state = up} -> {state = down}
+    {v} -> {state = up}
+}
+
+var sk = semaphore() {state = up};
+var wolne_miejsce = semaphore() {state = up};
+var brak_niezatw = semaphore() {state = up};
+var jest_niezatw = semaphore() {state = down};
+var do_odbioru = semaphore() {state = down};
+var ostatnioNP = semaphore() {state = down};
+var ostatnioP = semaphore() {state = up};
+
+process producer() {
+    loop {
+        wolne_miejsce.p();
+        brak_niezatw.p();
+        sk.p();
+            -- buf.put()
+            jest_niezatw.v();
+        sk.v();
+    }
+}
+
+process approver() {
+    loop {
+        jest_niezatw.p();
+        sk.p();
+            -- buf.approve()
+            do_odbioru.v();
+        sk.v();
+    }
+}
+
+process consumerP() {
+    loop {
+        ostatnioNP.p();
+        do_odbioru.p();
+        sk.p();
+            -- buf.get()
+            ostatnioP.v();
+            wolne_miejsce.v();
+        sk.v();
+    }
+}
+
+process consumerNP() {
+    loop {
+        ostatnioP.p();
+        do_odbioru.p();
+        sk.p();
+            -- buf.get()
+            ostatnioNP.v();
+            wolne_miejsce.v();
+        sk.v();
+    }
+}

@@ -33,8 +33,15 @@ data Process = Process
     , process_stmt :: Statement
     } deriving (Show)
 
+data ServerInstance = ServerInstance
+    { si_name :: Symbol
+    , si_serverType :: Symbol
+    , si_initialState :: Env
+    } deriving (Show)
+
 data Model = Model
     { model_servers :: [Server]
+    , model_serverInstances :: [ServerInstance]
     , model_procs :: [Process]
     } deriving (Show)
 

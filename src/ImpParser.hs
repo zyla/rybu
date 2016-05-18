@@ -72,7 +72,18 @@ term = Var <$> identifier <|> (Lit . Int) <$> natural
 
 model = Model
     <$> many server
+    <*> many serverInstance
     <*> many process
+
+serverInstance = ServerInstance
+    <$> (reserved "var" *> identifier)
+    <*> (reservedOp "=" *> identifier <* parens (pure ()))
+    <*> (initialState <* semicolon)
+
+initialState = M.fromList <$>
+    braces (many ((,) <$> identifier <*> (reservedOp "=" *> constant)))
+
+constant = Int <$> natural <|> Sym <$> identifier
 
 process =
   Process
@@ -92,4 +103,4 @@ matchCase = (,)
   
 message = Message <$> identifier <*> (reservedOp "." *> identifier <* parens (pure ()))
 
-parseModel = parse model
+parseModel = parse (model <* whiteSpace <* eof)

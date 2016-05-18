@@ -14,7 +14,7 @@ processModelFile file =
     Left err ->
       putStrLn $ "Syntax error: " ++ show err
 
-    Right Model{model_servers=servers, model_procs=procs} -> do
+    Right Model{model_servers=servers, model_serverInstances=instances, model_procs=procs} -> do
 
       forM_ servers $ \srv -> do
         putStrLn $ "server " ++ server_name srv
@@ -22,14 +22,11 @@ processModelFile file =
           Left err -> putStrLn $ "Error: " ++ show err
           Right transitions -> mapM_ print transitions
 
+      forM_ instances print
+
       forM_ procs $ \proc -> do
-        putStrLn $ "process " ++ show proc
-        putStrLn $ show (desugar $ process_stmt proc)
-        let ((first, last), g) = compile $ desugar $ process_stmt proc
-        forM_ (M.toList g) $ \(state, content) -> do
-            putStr (if state == first then "*" else " ")
-            print (state, content)
         putStrLn "---"
+        putStrLn $ "process " ++ process_name proc
         case totallyCompileProcess (process_stmt proc) of
             Left err -> print err
 
