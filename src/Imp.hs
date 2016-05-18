@@ -15,7 +15,12 @@ data Value = Sym Symbol | Int Integer deriving (Eq, Show)
 type Env = M.Map Symbol Value
 type TypeEnv = M.Map Symbol Type
 
-data Transition = Transition Symbol Predicate (Maybe Symbol) [(Symbol, Expr)] deriving (Show)
+data Transition = Transition
+    { t_name :: Symbol
+    , t_pred :: Predicate
+    , t_reply :: Maybe Symbol
+    , t_update :: [(Symbol, Expr)]
+    } deriving (Show)
 
 data Server = Server
     { server_name :: Symbol
