@@ -1,0 +1,4 @@
+Running:
+
+    stack build
+    stack exec dedan < imp_dedan.txt
