@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 module Parser where
 
 import Text.Parsec

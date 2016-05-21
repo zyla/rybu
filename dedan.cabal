@@ -30,6 +30,8 @@ library
 
   default-language:    Haskell2010
 
+  default-extensions:  RecordWildCards
+
 executable dedan
   hs-source-dirs:      app
   main-is:             Main.hs

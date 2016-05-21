@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 module Codegen where
 
 import Control.Monad.Writer
