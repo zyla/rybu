@@ -5,21 +5,57 @@ import Control.Arrow (first, second)
 import qualified Control.Monad.State as MS
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Imp
+import AST hiding (Statement(..))
+import qualified AST
+import Err
 
-data SimpleStmt = SMatch Message [(Symbol, SimpleStmt)] | SLoop SimpleStmt | SSeq SimpleStmt SimpleStmt | SSkip
-  deriving (Show)
+data CompiledProc = CompiledProc
+    { cp_states :: [Symbol]
+    , cp_services :: [Symbol]
+    , cp_usedServers :: [Symbol]
+    , cp_initialState :: Symbol
+    , cp_initialMessage :: Message
+    , cp_transitions :: [(Symbol, Symbol, Message, Symbol)]
+    } deriving (Show)
 
-desugar :: Statement -> SimpleStmt
-desugar Skip = SSkip
-desugar (Loop body) = SLoop (desugar body)
-desugar (Msg m) = desugar (Match m [("ok", Skip)])
-desugar (Block stmts) = foldr sseq SSkip (map desugar stmts)
+compileProcess :: AST.Statement -> EM CompiledProc
+compileProcess stmt = do
+    let ((initial, final), cfg) = compile $ desugar stmt
+
+        encodeT (T state input (nextState, message)) =
+            (encodeStateId cfg state, input, message, encodeStateId cfg nextState)
+
+    ts <- transitions cfg
+    (initialState, initialMessage) <- lookupCont cfg initial
+
+    return CompiledProc
+        { cp_states = dedup $ map (encodeStateId cfg . t_state) ts
+        , cp_services = dedup $ map t_in_message ts
+        , cp_usedServers = dedup $ map (message_server . snd . t_cont) ts
+        , cp_initialState = encodeStateId cfg initialState
+        , cp_initialMessage = initialMessage
+        , cp_transitions = map encodeT ts
+        }
   where
-    sseq SSkip x = x
-    sseq x SSkip = x
-    sseq x y    = SSeq x y
-desugar (Match m a) = SMatch m (map (second desugar) a)
+    dedup = S.toList . S.fromList
+
+data SimpleStmt =
+      Match Message [(Symbol, SimpleStmt)]
+    | Loop SimpleStmt
+    | Seq SimpleStmt SimpleStmt
+    | Skip
+      deriving (Show)
+
+desugar :: AST.Statement -> SimpleStmt
+desugar AST.Skip = Skip
+desugar (AST.Loop body) = Loop (desugar body)
+desugar (AST.Msg m) = desugar (AST.Match m [("ok", AST.Skip)])
+desugar (AST.Block stmts) = foldr sseq Skip (map desugar stmts)
+  where
+    sseq Skip x = x
+    sseq x Skip = x
+    sseq x y    = Seq x y
+desugar (AST.Match m a) = Match m (map (second desugar) a)
 
 
 type CFG = M.Map StateId StateDesc
@@ -41,24 +77,24 @@ compile :: SimpleStmt -> ((StateId, StateId), CFG)
 compile stmt = second snd $ MS.runState (compile' stmt) (0, M.empty)
 
 compile' :: SimpleStmt -> CompileM (StateId, StateId)
-compile' SSkip = do
+compile' Skip = do
     id <- newStateId
     return (id, id)
 
-compile' (SSeq x y) = do
+compile' (Seq x y) = do
     (x1, x2) <- compile' x
     (y1, y2) <- compile' y
     insertState x2 (Goto y1)
     return (x1, y2)
 
-compile' (SLoop body) = do
+compile' (Loop body) = do
     (start, end) <- compile' body
     insertState end (Goto start)
 
     dummy <- newStateId
     return (start, dummy)
 
-compile' (SMatch msg actions) = do
+compile' (Match msg actions) = do
     begin <- newStateId
     end <- newStateId
 
@@ -76,20 +112,18 @@ compile' (SMatch msg actions) = do
 type Cont = (StateId, Message)
 data T = T { t_state :: StateId, t_in_message :: Symbol, t_cont :: Cont } deriving (Show)
 
-data CompileErr = ErrCycle (S.Set StateId) deriving (Show)
-
-lookupCont :: CFG -> StateId -> Either CompileErr Cont
+lookupCont :: CFG -> StateId -> EM Cont
 lookupCont g = go S.empty
   where
     go visited stateId
-        | S.member stateId visited = Left (ErrCycle visited)
+        | S.member stateId visited = Left ErrCycle
         | otherwise =
             case M.lookup stateId g of
                 Nothing -> error ("panic: state not found: " ++ show stateId ++ " in " ++ show g)
                 Just (Goto next) -> go (S.insert stateId visited) next
                 Just (Send msg _) -> Right (stateId, msg)
 
-transitions :: CFG -> Either CompileErr [T]
+transitions :: CFG -> EM [T]
 transitions g = concat <$> mapM toTransitions (M.toList g)
   where
     toTransitions (_, (Goto _)) = pure []
@@ -102,34 +136,3 @@ encodeStateId cfg stateId =
     case lookupCont cfg stateId of
         Right (_, Message s m) -> "s" ++ show stateId ++ "_" ++ s ++ "_" ++ m
         Left _ -> "s" ++ show stateId
-
-data CompiledProc = CompiledProc
-    { cp_states :: [Symbol]
-    , cp_services :: [Symbol]
-    , cp_usedServers :: [Symbol]
-    , cp_initialState :: Symbol
-    , cp_initialMessage :: Message
-    , cp_transitions :: [(Symbol, Symbol, Message, Symbol)]
-    } deriving (Show)
-
-
-totallyCompileProcess :: Statement -> Either CompileErr CompiledProc
-totallyCompileProcess stmt = do
-    let ((initial, final), cfg) = compile $ desugar stmt
-
-        encodeT (T state input (nextState, message)) =
-            (encodeStateId cfg state, input, message, encodeStateId cfg nextState)
-
-    ts <- transitions cfg
-    (initialState, initialMessage) <- lookupCont cfg initial
-
-    return CompiledProc
-        { cp_states = dedup $ map (encodeStateId cfg . t_state) ts
-        , cp_services = dedup $ map t_in_message ts
-        , cp_usedServers = dedup $ map (message_server . snd . t_cont) ts
-        , cp_initialState = encodeStateId cfg initialState
-        , cp_initialMessage = initialMessage
-        , cp_transitions = map encodeT ts
-        }
-  where
-    dedup = S.toList . S.fromList

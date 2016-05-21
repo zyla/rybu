@@ -5,24 +5,27 @@ import Control.Monad.Writer
 import qualified Data.Map as M
 import Data.List (intercalate, nub)
 
-import Imp
+import AST
+import Err
 import CompileProc
+import CompileServer
 
-generateDedan :: Model -> String
-generateDedan Model{..} = execWriter $ do
+generateDedan :: Model -> EM String
+generateDedan Model{..} = execWriterT $ do
     let procNames = map process_name model_procs
-        Right compiledProcs = mapM (\(Process name stmt) -> (,) name <$> totallyCompileProcess stmt) model_procs
+
+    compiledProcs <- lift $ mapM (\(Process name stmt) -> (,) name <$> compileProcess stmt) model_procs
 
     forM_ model_servers $ \server@Server{..} -> do
         serverHeader server_name
             (map procServerName procNames)
             (map procAgentName procNames)
             (nub $ map t_name server_transitions)
-            (map (encodeState . M.toList) $ allStates $ M.toList server_vars)
+            (map (encodeState . M.toList) $ allStates server_vars)
 
         tellLn "actions {"
 
-        let ts = case compileTransitions server of Right x -> x; Left err -> error (show err)
+        ts <- lift $ compileTransitions server
 
         forM_ procNames $ \procName ->
             forM_ ts $ \(in_msg, in_state, out_msg, out_state) ->
@@ -62,7 +65,7 @@ generateDedan Model{..} = execWriter $ do
     forM_ model_serverInstances $ \(ServerInstance name _ initEnv) -> do
         tells ["  ", name, "("]
         tell $ intercalate "," (map procServerName procNames ++ map procAgentName procNames)
-        tells [").", encodeState (M.toList initEnv), ",\n"]
+        tells [").", encodeState initEnv, ",\n"]
 
     forM_ compiledProcs $ \(name, CompiledProc{..}) -> do
         tells ["  ", procServerName name, "("]
@@ -93,8 +96,8 @@ serverHeader serverName servers agents services states = do
 procServerName = ("S_"++)
 procAgentName = ("A_"++)
 
-tells :: [String] -> Writer String ()
+tells :: Monad m => [String] -> WriterT String m ()
 tells = tell . concat
 
-tellLn :: String -> Writer String ()
+tellLn :: Monad m => String -> WriterT String m ()
 tellLn str = tell str >> tell "\n"

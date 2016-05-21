@@ -1,15 +1,12 @@
 {-# LANGUAGE RecordWildCards #-}
-module ImpParser where
+module Parser where
 
-import Control.Monad (forM_)
 import Text.Parsec
 import qualified Text.Parsec.Language as L
 import qualified Text.Parsec.Token as T
 import Text.Parsec.Expr (buildExpressionParser, Assoc(..), Operator(..))
-import qualified Data.Set as S
-import qualified Data.Map as M
 
-import Imp
+import AST
 
 T.TokenParser {..} = T.makeTokenParser L.haskellDef
     { T.reservedNames = [ "server", "process", "var", "loop", "match" ] }
@@ -24,14 +21,14 @@ server = do
         vars <- var `sepEndBy` semicolon
         transitions <- many transition
 
-        return $ Server name (M.fromList vars) transitions
+        return $ Server name vars transitions
 
 var = (,)
     <$> (reserved "var" *> identifier)
     <*> (colon *> typ)
 
 typ =
-      Enum <$> braces (S.fromList <$> (identifier `sepBy1` comma))
+      Enum <$> braces (identifier `sepBy1` comma)
   <|> Range <$> natural <*> (reservedOp ".." *> natural)
 
 transition = do
@@ -68,7 +65,7 @@ additiveOp =
 expr = buildExpressionParser table term <?> "expression"
 table = [ [Infix (flip BinOp <$> additiveOp) AssocLeft] ]
 
-term = Var <$> identifier <|> (Lit . Int) <$> natural
+term = Var <$> identifier <|> (LitInt) <$> natural
 
 model = Model
     <$> many server
@@ -80,8 +77,7 @@ serverInstance = ServerInstance
     <*> (reservedOp "=" *> identifier <* parens (pure ()))
     <*> (initialState <* semicolon)
 
-initialState = M.fromList <$>
-    braces (many ((,) <$> identifier <*> (reservedOp "=" *> constant)))
+initialState = braces (many ((,) <$> identifier <*> (reservedOp "=" *> constant)))
 
 constant = Int <$> natural <|> Sym <$> identifier
 

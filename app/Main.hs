@@ -2,9 +2,8 @@ module Main where
 
 import Control.Monad
 import qualified Data.Map as M
-import Imp
-import ImpParser (parseModel)
-import CompileProc
+import System.Environment
+import Parser (parseModel)
 import Codegen
 
 main = getContents >>= processModelFile
@@ -15,6 +14,10 @@ processModelFile file =
     Left err ->
       putStrLn $ "Syntax error: " ++ show err
 
-    Right model@Model{model_servers=servers, model_serverInstances=instances, model_procs=procs} -> do
+    Right model ->
 
-      putStrLn $ generateDedan model
+      case generateDedan model of
+        Left err ->
+            putStrLn $ "Error: " ++ show err
+
+        Right source -> putStrLn source
