@@ -14,24 +14,24 @@ generateDedan Model{..} = execWriterT $ do
     let procNames = map process_name model_procs
 
     compiledProcs <- lift $ mapM (\(Process name stmt) -> (,) name <$> compileProcess stmt) model_procs
+    compiledServers <- lift $ mapM compileServer model_servers
 
-    forM_ model_servers $ \server@Server{..} -> do
-        serverHeader server_name
+    forM_ compiledServers $ \server@CompiledServer{..} -> do
+        serverHeader cs_name
             (map procServerName procNames)
             (map procAgentName procNames)
-            (nub $ map t_name server_transitions)
-            (map (encodeState . M.toList) $ allStates server_vars)
+            cs_services
+            cs_states
 
         tellLn "actions {"
 
-        ts <- lift $ compileTransitions server
-
         forM_ procNames $ \procName ->
-            forM_ ts $ \(in_msg, in_state, out_msg, out_state) ->
+            forM_ cs_actions $ \ServerAction
+                    {sa_inMessage=in_msg, sa_inState=in_state, sa_outMessage=out_msg, sa_outState=out_state} ->
                 let agent = procAgentName procName
                     server = procServerName procName
-                in tells ["  {", agent, ".", server_name, ".", in_msg, ", ", server_name, ".", in_state, "} -> {"
-                         , agent, ".", server, ".", out_msg, ", ", server_name, ".", out_state, "},\n"]
+                in tells ["  {", agent, ".", cs_name, ".", in_msg, ", ", cs_name, ".", in_state, "} -> {"
+                         , agent, ".", server, ".", out_msg, ", ", cs_name, ".", out_state, "},\n"]
 
         tellLn "};\n"
 

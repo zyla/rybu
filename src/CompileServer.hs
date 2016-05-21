@@ -1,14 +1,39 @@
 module CompileServer where
 
-import Control.Monad (join, filterM)
+import Control.Monad
 import Data.Maybe (fromMaybe)
-import Data.List (intercalate)
+import Data.List (intercalate, nub)
 import qualified Data.Set as S
 import qualified Data.Map as M
 
 import AST
 import Err
 import Eval
+
+data CompiledServer = CompiledServer
+    { cs_name :: Symbol
+    , cs_states :: [Symbol]
+    , cs_services :: [Symbol]
+    , cs_actions :: [ServerAction]
+    } deriving (Eq, Show)
+
+data ServerAction = ServerAction
+    { sa_inMessage :: Symbol
+    , sa_inState :: Symbol
+    , sa_outMessage :: Symbol
+    , sa_outState :: Symbol
+    } deriving (Eq, Show)
+
+compileServer :: Server -> EM CompiledServer
+compileServer server@Server{..} = do
+    actions <- compileTransitions server
+
+    pure CompiledServer
+        { cs_name = server_name
+        , cs_states = map (encodeState . M.toList) (allStates server_vars)
+        , cs_services = nub (map t_name server_transitions)
+        , cs_actions = actions
+        }
 
 encodeValue :: Value -> String
 encodeValue (Sym s) = s
@@ -43,7 +68,7 @@ matchingStates pred types =
     in filterM matches (allStates $ M.toList types)
 
 
-compileTransitions :: Server -> EM [(Symbol, String, Symbol, String)]
+compileTransitions :: Server -> EM [ServerAction]
 compileTransitions Server {server_vars=vars, server_transitions=transitions} =
     concat <$> mapM compileTransition transitions
 
@@ -51,12 +76,17 @@ compileTransitions Server {server_vars=vars, server_transitions=transitions} =
     encode = encodeState . M.toList
     syms = symbols (M.fromList vars)
 
-    compileTransition :: Transition -> EM [(Symbol, String, Symbol, String)]
+    compileTransition :: Transition -> EM [ServerAction]
     compileTransition (Transition name pred maybeOutSignal assignment) = 
       let compileState state = do
             let env = M.union syms state
             updates <- (traverse . traverse) (evalExpr env) assignment
-            pure (name, encode state, outSignal, encode (M.union (M.fromList updates) state))
+            pure ServerAction
+                { sa_inMessage = name
+                , sa_inState = encode state
+                , sa_outMessage = outSignal
+                , sa_outState = encode (M.union (M.fromList updates) state)
+                }
 
           outSignal = fromMaybe "ok" maybeOutSignal
             
