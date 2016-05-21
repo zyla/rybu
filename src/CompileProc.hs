@@ -10,7 +10,8 @@ import qualified AST
 import Err
 
 data CompiledProc = CompiledProc
-    { cp_states :: [Symbol]
+    { cp_name :: Symbol
+    , cp_states :: [Symbol]
     , cp_services :: [Symbol]
     , cp_usedServers :: [Symbol]
     , cp_initialState :: Symbol
@@ -18,8 +19,8 @@ data CompiledProc = CompiledProc
     , cp_transitions :: [(Symbol, Symbol, Message, Symbol)]
     } deriving (Show)
 
-compileProcess :: AST.Statement -> EM CompiledProc
-compileProcess stmt = do
+compileProcess :: AST.Process -> EM CompiledProc
+compileProcess (Process name stmt) = do
     let ((initial, final), cfg) = compile $ desugar stmt
 
         encodeT (T state input (nextState, message)) =
@@ -29,7 +30,8 @@ compileProcess stmt = do
     (initialState, initialMessage) <- lookupCont cfg initial
 
     return CompiledProc
-        { cp_states = dedup $ map (encodeStateId cfg . t_state) ts
+        { cp_name = name
+        , cp_states = dedup $ map (encodeStateId cfg . t_state) ts
         , cp_services = dedup $ map t_in_message ts
         , cp_usedServers = dedup $ map (message_server . snd . t_cont) ts
         , cp_initialState = encodeStateId cfg initialState

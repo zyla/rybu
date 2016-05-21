@@ -13,7 +13,7 @@ generateDedan :: Model -> EM String
 generateDedan Model{..} = execWriterT $ do
     let procNames = map process_name model_procs
 
-    compiledProcs <- lift $ mapM (\(Process name stmt) -> (,) name <$> compileProcess stmt) model_procs
+    compiledProcs <- lift $ mapM compileProcess model_procs
     compiledServers <- lift $ mapM compileServer model_servers
 
     forM_ compiledServers $ \server@CompiledServer{..} -> do
@@ -35,19 +35,21 @@ generateDedan Model{..} = execWriterT $ do
 
         tellLn "};\n"
 
-    forM_ compiledProcs $ \(name, CompiledProc{..}) -> do
-        serverHeader (procServerName name)
+    forM_ compiledProcs $ \CompiledProc{..} -> do
+        let agent = procAgentName cp_name
+            server = procServerName cp_name
+
+        serverHeader server
             (map siFormalParam model_serverInstances)
-            [procAgentName name]
+            [agent]
             cp_services
             cp_states
+
         tellLn "actions {"
 
         forM_ cp_transitions $ \(in_state, in_msg, Message out_server out_msg, out_state) ->
-            let agent = procAgentName name
-                server = procServerName name
-            in tells ["  {", agent, ".", server, ".", in_msg, ", ", server, ".", in_state, "} -> {"
-                     , agent, ".", out_server, ".", out_msg, ", ", server, ".", out_state, "},\n"]
+            tells ["  {", agent, ".", server, ".", in_msg, ", ", server, ".", in_state, "} -> {"
+                  , agent, ".", out_server, ".", out_msg, ", ", server, ".", out_state, "},\n"]
 
         tellLn "};\n"
 
@@ -66,12 +68,12 @@ generateDedan Model{..} = execWriterT $ do
         tell $ intercalate "," (map procServerName procNames ++ map procAgentName procNames)
         tells [").", encodeState initEnv, ",\n"]
 
-    forM_ compiledProcs $ \(name, CompiledProc{..}) -> do
-        tells ["  ", procServerName name, "("]
-        tell $ intercalate "," (map si_name model_serverInstances ++ [procAgentName name])
+    forM_ compiledProcs $ \CompiledProc{..} -> do
+        tells ["  ", procServerName cp_name, "("]
+        tell $ intercalate "," (map si_name model_serverInstances ++ [procAgentName cp_name])
         tells [").", cp_initialState, ",\n"]
 
-        tells ["  ", procAgentName name, ".", message_server cp_initialMessage, ".", message_msg cp_initialMessage, ",\n"]
+        tells ["  ", procAgentName cp_name, ".", message_server cp_initialMessage, ".", message_msg cp_initialMessage, ",\n"]
 
     tellLn "}."
 
