@@ -22,12 +22,17 @@ data Transition = Transition
     { t_sig :: MessageSig
     , t_pred :: Predicate
     , t_reply :: Maybe Symbol
-    , t_update :: [(Symbol, Expr)]
+    , t_update :: [(LHS, Expr)]
     } deriving (Show)
 
 data MessageSig = MessageSig
     { ms_name :: Symbol
     , ms_params :: [(Symbol, TypeExpr)]
+    } deriving (Show)
+
+data LHS = LHS
+    { lhs_var :: Symbol
+    , lhs_indexes :: [Expr]
     } deriving (Show)
 
 data TypeExpr = EnumE [Symbol] | RangeE Expr Expr | ArrayE TypeExpr Expr deriving (Show)

@@ -27,10 +27,7 @@ evalPredicate env = eval
     evalCmpOp _                 _        _  = err OpTypeMismatch
     
 
-evalExpr env (Var var) =
-    case M.lookup var env of
-        Just val -> pure val
-        Nothing -> err (UndefinedSymbol var)
+evalExpr env (Var var) = lookupVal env var
 
 evalExpr env (LitInt val) = pure (Int val)
 
@@ -118,3 +115,8 @@ evalType env (ArrayE typ size) = Array
     <*> (evalExpr env size >>= requireInt)
 
 encodeMessage name paramValues = name ++ concatMap (('_':) . encodeValue) paramValues
+
+lookupVal env var =
+    case M.lookup var env of
+        Just val -> pure val
+        Nothing -> err (UndefinedSymbol var)

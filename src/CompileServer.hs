@@ -47,19 +47,34 @@ compileServer server@Server{..} = do
                     let env = M.union paramsEnv state
                         outSignal = fromMaybe "ok" maybeOutSignal
 
-                    updates <- forM assignment $ \(varName, expr) -> do
-                        val <- evalExpr env expr
-                        typ <- lookupType varName typeEnv
+                        applyUpdate updatedEnv (LHS var indexes, expr) = do
+                            oldToplevelVal <- lookupVal state var
 
-                        checkType typ val
+                            newVal <- evalExpr env expr
 
-                        pure (varName, val)
+                            let updateArray indexE old f = do
+                                    arr <- requireArray old
+                                    index <- evalExpr env indexE >>= requireInt
+                                    newVal <- f (arr !! index)
+                                    pure (Arr $ listSet index newVal arr)
+
+                                updateIndexes [] old f = f old
+                                updateIndexes (i:is) old f = updateArray i old (\v -> updateIndexes is v f)
+
+                            newToplevelVal <- updateIndexes indexes oldToplevelVal (\_ -> pure newVal)
+
+                            toplevelType <- lookupType var typeEnv
+                            checkType toplevelType newToplevelVal
+
+                            pure (M.insert var newToplevelVal updatedEnv)
+
+                    updates <- foldM applyUpdate state assignment
 
                     pure ServerAction
                         { sa_inMessage = encodeMessage (ms_name msgSig) (map snd paramValues)
                         , sa_inState = encode state
                         , sa_outMessage = outSignal
-                        , sa_outState = encode (M.union (M.fromList updates) state)
+                        , sa_outState = encode (M.union updates state)
                         }
                     
 
@@ -71,6 +86,10 @@ compileServer server@Server{..} = do
         , cs_services = nub (map sa_inMessage actions)
         , cs_actions = actions
         }
+
+listSet :: Int -> a -> [a] -> [a]
+listSet 0 x (_:xs) = x:xs
+listSet i newX (x:xs) = x : listSet (i - 1) newX xs
 
 typeValues :: Type -> [Value]
 typeValues (Enum values) = map Sym values

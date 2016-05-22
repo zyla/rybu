@@ -64,7 +64,9 @@ predicate = buildExpressionParser
 
 cmpExpr = Cmp <$> expr <*> cmpOp <*> expr
 
-assign = (,) <$> identifier <*> (reservedOp "=" *> expr)
+assign = (,) <$> lhs <*> (reservedOp "=" *> expr)
+
+lhs = LHS <$> identifier <*> many (brackets expr)
 
 cmpOp =
       pure Equal <* reservedOp "="

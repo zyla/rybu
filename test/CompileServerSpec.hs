@@ -69,6 +69,31 @@ spec = describe "compileServer" $ do
 
         assertEqual "" expected cs_actions
 
+    it "should handle array updates" $ do
+        let CompiledServer{..} = compileServer' [r|
+            server counter {
+                var buf : ((1..5)[2])[2];
+                { foo | buf = [[1, 2], [3, 4]] } -> { buf[0][1] = 5 }
+            }
+        |]
+
+        let expected = [ServerAction "foo" "buf_1_2_3_4" "ok" "buf_1_5_3_4"]
+
+        assertEqual "" expected cs_actions
+
+    it "should handle array example" $ do
+        shouldCompile [r|
+            server buf {
+                var data : (0..2)[5];
+                var count : 0..5;
+
+                { put(elem : 0..2) | count < 5 } -> {
+                    data[count] = elem,
+                    count = count + 1
+                }
+            }
+        |]
+
 for = flip map
 
 compileServer' source =
@@ -80,3 +105,5 @@ compileServer' source =
 shouldFail source err =
     let server = unsafeParse Parser.server source
     in assertEqual source (Left err) (compileServer server)
+
+shouldCompile source = compileServer' source `seq` (pure () :: Assertion)
