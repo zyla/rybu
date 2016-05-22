@@ -1,9 +1,6 @@
 module EvalSpec where
 
-import Test.Hspec
-import Test.HUnit
-
-import qualified Data.Map as M
+import TestImport
 
 import AST
 import Eval (inRange)
@@ -26,7 +23,3 @@ spec = do
             test (Enum ["up", "down"], Sym "down") True
             test (Enum ["up", "down"], Sym "left") False
             test (Enum ["up", "down"], Int 1) False
-
-testF :: (Show a, Show b, Eq b) => String -> (a -> b) -> a -> b -> Assertion
-testF name f input expected =
-    assertEqual (name ++ " " ++ show input) expected (f input)

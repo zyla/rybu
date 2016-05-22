@@ -1,7 +1,6 @@
 module CompileServerSpec where
 
-import Test.Hspec
-import Test.HUnit
+import TestImport
 
 import qualified Parser
 import CompileServer
@@ -59,10 +58,5 @@ spec = describe "compileServer" $ do
 
 
 shouldFail source err =
-    let server = unsafeParseServer source
+    let server = unsafeParse Parser.server source
     in assertEqual source (Left err) (compileServer server)
-
-unsafeParseServer source = 
-    case Parser.parse (Parser.whiteSpace *> Parser.server) "" source of
-        Right server -> server
-        Left err -> error ("Parse Error: " ++ show err)
