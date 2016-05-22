@@ -114,3 +114,5 @@ evalType env (RangeE from to) = Range
 evalType env (ArrayE typ size) = Array
     <$> evalType env typ
     <*> (evalExpr env size >>= requireInt)
+
+encodeMessage name paramValues = name ++ concatMap (('_':) . encodeValue) paramValues

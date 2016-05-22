@@ -41,7 +41,7 @@ simpleType =
   <|> RangeE <$> term <*> (reservedOp ".." *> term)
 
 transition = do
-    (message, pred) <- braces $ (,) <$> identifier <*>
+    (message, pred) <- braces $ (,) <$> messageSig <*>
         (reservedOp "|" *> predicate <|> pure (BoolLit True))
     reservedOp "->"
     (maybeOutSignal, assignments) <- try (braces retvalOnly) <|>
@@ -52,6 +52,10 @@ transition = do
     return $ Transition message pred maybeOutSignal assignments
   where
     retvalOnly = flip (,) [] . Just <$> identifier
+
+formalParam = (,) <$> identifier <*> (reservedOp ":" *> typ)
+
+messageSig = MessageSig <$> identifier <*> option [] (parens $ formalParam `sepBy` comma)
 
 predicate = buildExpressionParser
     [ [Infix (reservedOp "||" *> pure Or) AssocLeft]
@@ -122,6 +126,9 @@ matchCase = (,)
     <$> identifier
     <*> (reservedOp "=>" *> statement)
   
-message = Message <$> identifier <*> (reservedOp "." *> identifier <* parens (pure ()))
+message = Message
+    <$> identifier
+    <*> (reservedOp "." *> identifier)
+    <*> parens (expr `sepBy` comma)
 
 parseModel = parse (model <* whiteSpace <* eof)

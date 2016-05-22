@@ -8,6 +8,7 @@ import qualified Data.Set as S
 import AST hiding (Statement(..))
 import qualified AST
 import Err
+import Eval
 
 data CompiledProc = CompiledProc
     { cp_name :: Symbol
@@ -16,17 +17,21 @@ data CompiledProc = CompiledProc
     , cp_usedServers :: [Symbol]
     , cp_initialState :: Symbol
     , cp_initialMessage :: Message
-    , cp_transitions :: [(Symbol, Symbol, Message, Symbol)]
+    , cp_transitions :: [(Symbol, Symbol, Symbol, Symbol, Symbol)]
     } deriving (Show)
 
 compileProcess :: AST.Process -> EM CompiledProc
 compileProcess (Process name stmt) = do
     let ((initial, final), cfg) = compile $ desugar stmt
 
-        encodeT (T state input (nextState, message)) =
-            (encodeStateId cfg state, input, message, encodeStateId cfg nextState)
+        encodeT (T state input (nextState, Message{..})) = do
+            paramValues <- mapM (evalExpr M.empty) message_params
+            pure (encodeStateId cfg state, input,
+                  message_server, encodeMessage message_msg paramValues,
+                  encodeStateId cfg nextState)
 
     ts <- transitions cfg
+    encodedTs <- mapM encodeT ts
     (initialState, initialMessage) <- lookupCont cfg initial
 
     return CompiledProc
@@ -36,7 +41,7 @@ compileProcess (Process name stmt) = do
         , cp_usedServers = dedup $ map (message_server . snd . t_cont) ts
         , cp_initialState = encodeStateId cfg initialState
         , cp_initialMessage = initialMessage
-        , cp_transitions = map encodeT ts
+        , cp_transitions = encodedTs
         }
   where
     dedup = S.toList . S.fromList
@@ -136,5 +141,5 @@ transitions g = concat <$> mapM toTransitions (M.toList g)
 encodeStateId :: CFG -> StateId -> Symbol
 encodeStateId cfg stateId =
     case lookupCont cfg stateId of
-        Right (_, Message s m) -> "s" ++ show stateId ++ "_" ++ s ++ "_" ++ m
+        Right (_, Message s m _) -> "s" ++ show stateId ++ "_" ++ s ++ "_" ++ m
         Left _ -> "s" ++ show stateId

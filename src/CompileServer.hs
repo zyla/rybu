@@ -32,39 +32,43 @@ compileServer server@Server{..} = do
         (,) name <$> evalType env typeE
 
     let encode = encodeState . M.toList
-        syms = symbols typeEnv
+        serverEnv = symbols typeEnv
 
-        compileTransition :: Transition -> EM [ServerAction]
-        compileTransition (Transition name pred maybeOutSignal assignment) = 
-          let compileState state = do
-                let env = M.union syms state
+        compileTransition :: Transition -> EM [[ServerAction]]
+        compileTransition (Transition msgSig pred maybeOutSignal assignment) = do
+            params <- traverse (\(name, typeE) -> (,) name <$> evalType serverEnv typeE) (ms_params msgSig)
 
-                updates <- forM assignment $ \(varName, expr) -> do
-                    val <- evalExpr env expr
-                    typ <- lookupType varName typeEnv
+            forM (allStates params) $ \paramValues -> do
+                let paramsEnv = M.fromList paramValues `M.union` serverEnv
 
-                    checkType typ val
+                states <- matchingStates paramsEnv pred typeEnv
 
-                    pure (varName, val)
+                forM states $ \state -> do
+                    let env = M.union paramsEnv state
+                        outSignal = fromMaybe "ok" maybeOutSignal
 
-                pure ServerAction
-                    { sa_inMessage = name
-                    , sa_inState = encode state
-                    , sa_outMessage = outSignal
-                    , sa_outState = encode (M.union (M.fromList updates) state)
-                    }
+                    updates <- forM assignment $ \(varName, expr) -> do
+                        val <- evalExpr env expr
+                        typ <- lookupType varName typeEnv
 
-              outSignal = fromMaybe "ok" maybeOutSignal
-                
+                        checkType typ val
 
-          in matchingStates pred typeEnv >>= mapM compileState
+                        pure (varName, val)
 
-    actions <- concat <$> mapM compileTransition server_transitions
+                    pure ServerAction
+                        { sa_inMessage = encodeMessage (ms_name msgSig) (map snd paramValues)
+                        , sa_inState = encode state
+                        , sa_outMessage = outSignal
+                        , sa_outState = encode (M.union (M.fromList updates) state)
+                        }
+                    
+
+    actions <- (concat . concat) <$> mapM compileTransition server_transitions
 
     pure CompiledServer
         { cs_name = server_name
-        , cs_states = map (encodeState . M.toList) (allStates $ M.toList typeEnv)
-        , cs_services = nub (map t_name server_transitions)
+        , cs_states = map encodeState (allStates $ M.toList typeEnv)
+        , cs_services = nub (map sa_inMessage actions)
         , cs_actions = actions
         }
 
@@ -76,14 +80,12 @@ typeValues (Array elemType size) = map Arr $ traverse typeValues (replicate (fro
 encodeState :: [(Symbol, Value)] -> Symbol
 encodeState = intercalate "_" . map (\(name, val) -> name ++ "_" ++ encodeValue val)
 
-allAssignments :: [Type] -> [[Value]]
-allAssignments = sequence . map typeValues
-
-allStates :: [(Symbol, Type)] -> [Env]
+allStates :: [(Symbol, Type)] -> [[(Symbol, Value)]]
 allStates vars =
     let names = map fst vars
         types = map snd vars
-    in map (M.fromList . zip names) (allAssignments types)
+    in map (zip names) . sequence . map typeValues $ types
+
 
 symbols :: TypeEnv -> Env
 symbols = M.fromList . concatMap varSyms . M.elems
@@ -92,13 +94,10 @@ symbols = M.fromList . concatMap varSyms . M.elems
     varSyms (Range _ _) = []
     varSyms (Array typ _) = varSyms typ
 
-matchingStates :: Predicate -> TypeEnv -> EM [Env]
-matchingStates pred types =
-    let syms = symbols types
-        matches env = evalPredicate (env `M.union` syms) pred
-    in filterM matches (allStates $ M.toList types)
-
-
+matchingStates :: Env -> Predicate -> TypeEnv -> EM [Env]
+matchingStates upperEnv pred types =
+    let matches env = evalPredicate (env `M.union` upperEnv) pred
+    in filterM matches (map M.fromList $ allStates $ M.toList types)
 
 checkType :: Type -> Value -> EM ()
 checkType typ val

@@ -47,7 +47,7 @@ generateDedan Model{..} = execWriterT $ do
 
         tellLn "actions {"
 
-        forM_ cp_transitions $ \(in_state, in_msg, Message out_server out_msg, out_state) ->
+        forM_ cp_transitions $ \(in_state, in_msg, out_server, out_msg, out_state) ->
             tells ["  {", agent, ".", server, ".", in_msg, ", ", server, ".", in_state, "} -> {"
                   , agent, ".", out_server, ".", out_msg, ", ", server, ".", out_state, "},\n"]
 

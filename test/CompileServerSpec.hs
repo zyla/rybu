@@ -56,6 +56,26 @@ spec = describe "compileServer" $ do
             }
         |] (TypeMismatch "0..3" "4")
 
+    it "should handle parameterized messages" $ do
+        let CompiledServer{..} = compileServer' [r|
+            server counter {
+                var val : 1..3;
+                { set(new_val : 1..3, a : {b}) | val = 1 } -> { val = new_val }
+            }
+        |]
+
+        let expected = for [1..3] $ \index ->
+                ServerAction ("set_" ++ show index ++ "_b") "val_1" "ok" ("val_" ++ show index) 
+
+        assertEqual "" expected cs_actions
+
+for = flip map
+
+compileServer' source =
+    let server = unsafeParse Parser.server source
+    in case compileServer server of
+        Right server -> server
+        Left err -> error $ "compileServer error: " ++ show err
 
 shouldFail source err =
     let server = unsafeParse Parser.server source
