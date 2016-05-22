@@ -116,9 +116,7 @@ serverInstance = ServerInstance
     <*> (reservedOp "=" *> identifier <* parens (pure ()))
     <*> (initialState <* semicolon)
 
-initialState = braces (many ((,) <$> identifier <*> (reservedOp "=" *> constant)))
-
-constant = Int <$> natural <|> Sym <$> identifier
+initialState = braces (((,) <$> identifier <*> (reservedOp "=" *> expr)) `sepBy` comma)
 
 process =
   Process

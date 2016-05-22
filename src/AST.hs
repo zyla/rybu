@@ -73,7 +73,7 @@ data Value = Sym Symbol | Int Integer | Arr [Value] deriving (Eq, Show)
 data ServerInstance = ServerInstance
     { si_name :: Symbol
     , si_serverType :: Symbol
-    , si_initialState :: [(Symbol, Value)]
+    , si_initialState :: [(Symbol, Expr)]
     } deriving (Show)
 
 -- Process

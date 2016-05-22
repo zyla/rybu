@@ -8,6 +8,7 @@ import AST
 import Err
 import CompileProc
 import CompileServer
+import Eval
 
 generateDedan :: Model -> EM String
 generateDedan Model{..} = execWriterT $ do
@@ -63,9 +64,10 @@ generateDedan Model{..} = execWriterT $ do
     tellLn ";\n"
 
     tellLn "init -> {"
-    forM_ model_serverInstances $ \(ServerInstance name _ initEnv) -> do
+    forM_ model_serverInstances $ \(ServerInstance name _ initEnvExpr) -> do
         tells ["  ", name, "("]
         tell $ intercalate "," (map procServerName procNames ++ map procAgentName procNames)
+        initEnv <- lift $ (traverse . traverseSecond) (evalExpr M.empty) initEnvExpr
         tells [").", encodeState initEnv, ",\n"]
 
     forM_ compiledProcs $ \CompiledProc{..} -> do
@@ -76,6 +78,8 @@ generateDedan Model{..} = execWriterT $ do
         tells ["  ", procAgentName cp_name, ".", message_server cp_initialMessage, ".", message_msg cp_initialMessage, ",\n"]
 
     tellLn "}."
+
+traverseSecond inj (a, b) = (,) a <$> inj b
 
 siFormalParam ServerInstance{si_name=name, si_serverType=typ} = name ++ ": " ++ typ
 
