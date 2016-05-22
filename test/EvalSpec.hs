@@ -52,6 +52,7 @@ spec = do
         it "basic literals" $ do
             test "1" $ Right (Int 1)
             test "up" $ Right (Sym "up")
+            test ":true" $ Right (Sym "true")
 
         it "arithmetic" $ do
             test "1 + 2 + 3" $ Right (Int 6)

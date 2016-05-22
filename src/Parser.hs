@@ -84,6 +84,7 @@ table =
 term =
       Var <$> identifier
   <|> LitInt <$> natural
+  <|> LitSym <$> (reservedOp ":" *> identifier)
   <|> brackets (
         LitArrFill <$> try (expr <* semicolon) <*> expr
     <|> LitArr <$> (expr `sepBy` comma))

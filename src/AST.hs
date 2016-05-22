@@ -50,6 +50,7 @@ data CmpOp =
 data Expr =
       Var Symbol
     | LitInt Integer
+    | LitSym Symbol
     | LitArr [Expr] -- [1, 2, 3]
     | LitArrFill Expr Expr -- [5; 0]
     | ArrayIndex Expr Expr -- arr[3]

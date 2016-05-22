@@ -34,6 +34,8 @@ evalExpr env (Var var) =
 
 evalExpr env (LitInt val) = pure (Int val)
 
+evalExpr env (LitSym val) = pure (Sym val)
+
 evalExpr env (LitArr exprs) = Arr <$> traverse (evalExpr env) exprs
 
 evalExpr env (LitArrFill sizeE valueE) = do
