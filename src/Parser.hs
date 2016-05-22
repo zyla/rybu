@@ -131,7 +131,7 @@ statement =
   <|> Match <$> (reserved "match" *> message) <*> braces (many1 matchCase)
 
 matchCase = (,)
-    <$> identifier
+    <$> (optional colon *> identifier)
     <*> (reservedOp "=>" *> statement)
   
 message = Message
