@@ -70,8 +70,11 @@ lhs = LHS <$> identifier <*> many (brackets expr)
 
 cmpOp =
       pure Equal <* reservedOp "="
+  <|> pure NotEqual <* reservedOp "!="
   <|> pure LessThan <* reservedOp "<"
   <|> pure GreaterThan <* reservedOp ">"
+  <|> pure LessThanEqual <* reservedOp "<="
+  <|> pure GreaterThanEqual <* reservedOp ">="
 
 additiveOp =
       pure Plus <* reservedOp "+"

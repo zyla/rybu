@@ -48,8 +48,11 @@ data Predicate =
 
 data CmpOp =
       Equal
+    | NotEqual
     | LessThan
     | GreaterThan
+    | LessThanEqual
+    | GreaterThanEqual
       deriving (Show)
 
 data Expr =

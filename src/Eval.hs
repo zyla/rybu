@@ -22,8 +22,12 @@ evalPredicate env = eval
     evalCmpOp Equal       (Sym v1) (Sym v2) = pure (v1 == v2)
     evalCmpOp Equal       (Arr v1) (Arr v2) = pure (v1 == v2)
 
+    evalCmpOp NotEqual         v1       v2  = not <$> evalCmpOp Equal v1 v2
+
     evalCmpOp LessThan    (Int v1) (Int v2) = pure (v1 < v2)
     evalCmpOp GreaterThan (Int v1) (Int v2) = pure (v1 > v2)
+    evalCmpOp LessThanEqual  (Int v1) (Int v2) = pure (v1 <= v2)
+    evalCmpOp GreaterThanEqual (Int v1) (Int v2) = pure (v1 >= v2)
     evalCmpOp _                 _        _  = err OpTypeMismatch
     
 
