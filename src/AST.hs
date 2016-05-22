@@ -14,7 +14,7 @@ data Model = Model
 
 data Server = Server
     { server_name :: Symbol
-    , server_vars :: [(Symbol, Type)]
+    , server_vars :: [(Symbol, TypeExpr)]
     , server_transitions :: [Transition]
     } deriving (Show)
 
@@ -25,7 +25,9 @@ data Transition = Transition
     , t_update :: [(Symbol, Expr)]
     } deriving (Show)
 
-data Type = Enum [Symbol] | Range Integer Integer deriving (Show)
+data TypeExpr = EnumE [Symbol] | RangeE Expr Expr | ArrayE TypeExpr Expr deriving (Show)
+
+data Type = Enum [Symbol] | Range Integer Integer | Array Type Integer deriving (Eq, Show)
 
 data Predicate =
       Cmp Expr CmpOp Expr 
@@ -43,12 +45,16 @@ data CmpOp =
 data Expr =
       Var Symbol
     | LitInt Integer
-    | BinOp Expr BinOp Expr
+    | LitArr [Expr] -- [1, 2, 3]
+    | LitArrFill Expr Expr -- [5; 0]
+    | ArrayIndex Expr Expr -- arr[3]
+    | ArraySlice Expr Expr Expr -- arr[1..3]
+    | BinOp Expr BinOp Expr -- 2 + 3
       deriving (Show)
 
 data BinOp = Plus | Minus deriving (Show)
 
-data Value = Sym Symbol | Int Integer deriving (Eq, Show)
+data Value = Sym Symbol | Int Integer | Arr [Value] deriving (Eq, Show)
 
 data ServerInstance = ServerInstance
     { si_name :: Symbol

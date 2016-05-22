@@ -26,22 +26,52 @@ data ServerAction = ServerAction
 
 compileServer :: Server -> EM CompiledServer
 compileServer server@Server{..} = do
-    actions <- compileTransitions server
+    let env = M.empty
+        
+    typeEnv <- fmap M.fromList $ forM server_vars $ \(name, typeE) ->
+        (,) name <$> evalType env typeE
+
+    let encode = encodeState . M.toList
+        syms = symbols typeEnv
+
+        compileTransition :: Transition -> EM [ServerAction]
+        compileTransition (Transition name pred maybeOutSignal assignment) = 
+          let compileState state = do
+                let env = M.union syms state
+
+                updates <- forM assignment $ \(varName, expr) -> do
+                    val <- evalExpr env expr
+                    typ <- lookupType varName typeEnv
+
+                    checkType typ val
+
+                    pure (varName, val)
+
+                pure ServerAction
+                    { sa_inMessage = name
+                    , sa_inState = encode state
+                    , sa_outMessage = outSignal
+                    , sa_outState = encode (M.union (M.fromList updates) state)
+                    }
+
+              outSignal = fromMaybe "ok" maybeOutSignal
+                
+
+          in matchingStates pred typeEnv >>= mapM compileState
+
+    actions <- concat <$> mapM compileTransition server_transitions
 
     pure CompiledServer
         { cs_name = server_name
-        , cs_states = map (encodeState . M.toList) (allStates server_vars)
+        , cs_states = map (encodeState . M.toList) (allStates $ M.toList typeEnv)
         , cs_services = nub (map t_name server_transitions)
         , cs_actions = actions
         }
 
-encodeValue :: Value -> String
-encodeValue (Sym s) = s
-encodeValue (Int i) = show i
-
 typeValues :: Type -> [Value]
 typeValues (Enum values) = map Sym values
 typeValues (Range from to) = map Int [from..to]
+typeValues (Array elemType size) = map Arr $ traverse typeValues (replicate (fromIntegral size) elemType)
 
 encodeState :: [(Symbol, Value)] -> Symbol
 encodeState = intercalate "_" . map (\(name, val) -> name ++ "_" ++ encodeValue val)
@@ -56,10 +86,11 @@ allStates vars =
     in map (M.fromList . zip names) (allAssignments types)
 
 symbols :: TypeEnv -> Env
-symbols = M.fromList . concatMap varSyms . M.toList
+symbols = M.fromList . concatMap varSyms . M.elems
   where
-    varSyms (name, Enum syms) = map (\sym -> (sym, Sym sym)) syms
-    varSyms (name, Range _ _) = []
+    varSyms (Enum syms) = map (\sym -> (sym, Sym sym)) syms
+    varSyms (Range _ _) = []
+    varSyms (Array typ _) = varSyms typ
 
 matchingStates :: Predicate -> TypeEnv -> EM [Env]
 matchingStates pred types =
@@ -68,48 +99,15 @@ matchingStates pred types =
     in filterM matches (allStates $ M.toList types)
 
 
-compileTransitions :: Server -> EM [ServerAction]
-compileTransitions Server {server_vars=vars, server_transitions=transitions} =
-    concat <$> mapM compileTransition transitions
-
-  where
-    encode = encodeState . M.toList
-    syms = symbols (M.fromList vars)
-
-    typeEnv = M.fromList vars
-
-    compileTransition :: Transition -> EM [ServerAction]
-    compileTransition (Transition name pred maybeOutSignal assignment) = 
-      let compileState state = do
-            let env = M.union syms state
-
-            updates <- forM assignment $ \(varName, expr) -> do
-                val <- evalExpr env expr
-                typ <- lookupType varName typeEnv
-
-                checkType typ val
-
-                pure (varName, val)
-
-            pure ServerAction
-                { sa_inMessage = name
-                , sa_inState = encode state
-                , sa_outMessage = outSignal
-                , sa_outState = encode (M.union (M.fromList updates) state)
-                }
-
-          outSignal = fromMaybe "ok" maybeOutSignal
-            
-
-      in matchingStates pred (M.fromList vars) >>= mapM compileState
 
 checkType :: Type -> Value -> EM ()
 checkType typ val
     | inRange typ val = pure ()
-    | otherwise       = err $ TypeMismatch (ppType typ) (encodeValue val)
-
-ppType (Enum vals) = "{" ++ intercalate ", " vals ++ "}"
-ppType (Range from to) = show from ++ ".." ++ show to
+    | otherwise       = err $ TypeMismatch (ppType typ) (ppValue val)
+ where
+    ppType (Enum vals) = "{" ++ intercalate ", " vals ++ "}"
+    ppType (Range from to) = show from ++ ".." ++ show to
+    ppType (Array typ size) = "(" ++ ppType typ ++ ")[" ++ show size ++ "]"
 
 lookupType :: Symbol -> TypeEnv -> EM Type
 lookupType var env =

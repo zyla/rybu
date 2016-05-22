@@ -29,9 +29,16 @@ var = (,)
     <$> (reserved "var" *> identifier)
     <*> (colon *> typ)
 
-typ =
-      Enum <$> braces (identifier `sepBy1` comma)
-  <|> Range <$> natural <*> (reservedOp ".." *> natural)
+typ = simpleType >>= arraySuffix
+
+arraySuffix t = 
+      brackets ((ArrayE t <$> expr) >>= arraySuffix)
+  <|> pure t
+
+simpleType =
+      EnumE <$> braces (identifier `sepBy1` comma)
+  <|> parens typ
+  <|> RangeE <$> term <*> (reservedOp ".." *> term)
 
 transition = do
     (message, pred) <- braces $ (,) <$> identifier <*>
@@ -65,9 +72,25 @@ additiveOp =
   <|> pure Minus <* reservedOp "-"
 
 expr = buildExpressionParser table term <?> "expression"
-table = [ [Infix (flip BinOp <$> additiveOp) AssocLeft] ]
+table =
+    [ [Postfix arrayIndexOrSlice]
+    , [Infix (flip BinOp <$> additiveOp) AssocLeft]
+    ]
 
-term = Var <$> identifier <|> (LitInt) <$> natural
+term =
+      Var <$> identifier
+  <|> LitInt <$> natural
+  <|> brackets (
+        LitArrFill <$> try (expr <* semicolon) <*> expr
+    <|> LitArr <$> (expr `sepBy` comma))
+  <|> parens expr
+
+arrayIndexOrSlice = brackets $ do
+    index1 <- expr
+    (reservedOp ".." *> do
+        index2 <- expr
+        pure (\arrayE -> ArraySlice arrayE index1 index2)
+     ) <|> pure (\arrayE -> ArrayIndex arrayE index1)
 
 model = Model
     <$> many server
