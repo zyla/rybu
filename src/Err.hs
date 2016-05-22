@@ -4,7 +4,7 @@ data Err =
       UndefinedSymbol String
     | TypeMismatch
     | ErrCycle
-      deriving (Show)
+      deriving (Eq, Show)
 
 err = Left
 

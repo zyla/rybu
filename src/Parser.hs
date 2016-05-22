@@ -1,4 +1,7 @@
-module Parser where
+module Parser (
+    module Parser
+  , Text.Parsec.parse
+) where
 
 import Text.Parsec
 import qualified Text.Parsec.Language as L
