@@ -76,11 +76,21 @@ compileTransitions Server {server_vars=vars, server_transitions=transitions} =
     encode = encodeState . M.toList
     syms = symbols (M.fromList vars)
 
+    typeEnv = M.fromList vars
+
     compileTransition :: Transition -> EM [ServerAction]
     compileTransition (Transition name pred maybeOutSignal assignment) = 
       let compileState state = do
             let env = M.union syms state
-            updates <- (traverse . traverse) (evalExpr env) assignment
+
+            updates <- forM assignment $ \(varName, expr) -> do
+                val <- evalExpr env expr
+                typ <- lookupType varName typeEnv
+
+                checkType typ val
+
+                pure (varName, val)
+
             pure ServerAction
                 { sa_inMessage = name
                 , sa_inState = encode state
@@ -92,3 +102,17 @@ compileTransitions Server {server_vars=vars, server_transitions=transitions} =
             
 
       in matchingStates pred (M.fromList vars) >>= mapM compileState
+
+checkType :: Type -> Value -> EM ()
+checkType typ val
+    | inRange typ val = pure ()
+    | otherwise       = err $ TypeMismatch (ppType typ) (encodeValue val)
+
+ppType (Enum vals) = "{" ++ intercalate ", " vals ++ "}"
+ppType (Range from to) = show from ++ ".." ++ show to
+
+lookupType :: Symbol -> TypeEnv -> EM Type
+lookupType var env =
+    case M.lookup var env of
+        Just typ -> pure typ
+        Nothing -> err (UndefinedSymbol var)

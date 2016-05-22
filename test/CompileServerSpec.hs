@@ -26,6 +26,37 @@ spec = describe "compileServer" $ do
             }
         |] (UndefinedSymbol "left")
 
+        it "in state LHS" $ shouldFail [r|
+            server sem {
+                var state : {up, down};
+                {p} -> {counter = 1}
+            }
+        |] (UndefinedSymbol "counter")
+
+    it "should detect badly typed arithmetic" $ do
+        shouldFail [r|
+            server sem {
+                var state : {up, down};
+                {p | state = up} -> {state = state + 1}
+            }
+        |] OpTypeMismatch
+
+    it "should detect badly typed comparison" $ do
+        shouldFail [r|
+            server sem {
+                var state : {up, down};
+                {p | state = 1} -> {ok}
+            }
+        |] OpTypeMismatch
+
+    it "should detect badly typed updates" $ do
+        shouldFail [r|
+            server buf {
+                var count : 0..3;
+                {put} -> {count = count + 1}
+            }
+        |] (TypeMismatch "0..3" "3")
+
 
 shouldFail source err =
     let server = unsafeParseServer source

@@ -2,7 +2,8 @@ module Err(Err(..), err, EM) where
 
 data Err =
       UndefinedSymbol String
-    | TypeMismatch
+    | OpTypeMismatch -- ^ TODO: more info
+    | TypeMismatch String String -- ^ type, value
     | ErrCycle
       deriving (Eq, Show)
 
