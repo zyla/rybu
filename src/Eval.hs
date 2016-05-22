@@ -36,7 +36,7 @@ evalExpr env (BinOp e1 op e2) = join $ evalBinOp op <$> evalExpr env e1 <*> eval
     evalBinOp _ _ _ = err OpTypeMismatch
 
 inRange :: Type -> Value -> Bool
-inRange (Range from to) (Int v) = v >= from && v < to
+inRange (Range from to) (Int v) = v >= from && v <= to
 inRange (Range from to) _ = False
 inRange (Enum vals) (Sym v) = v `elem` vals
 inRange (Enum vals) _ = False

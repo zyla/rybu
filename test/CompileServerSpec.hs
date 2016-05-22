@@ -55,7 +55,7 @@ spec = describe "compileServer" $ do
                 var count : 0..3;
                 {put} -> {count = count + 1}
             }
-        |] (TypeMismatch "0..3" "3")
+        |] (TypeMismatch "0..3" "4")
 
 
 shouldFail source err =
