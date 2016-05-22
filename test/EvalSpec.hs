@@ -57,6 +57,7 @@ spec = do
         it "arithmetic" $ do
             test "1 + 2 + 3" $ Right (Int 6)
             test "size - 1" $ Right (Int 4)
+            test "5 % 4" $ Right (Int 1)
 
         it "array literals" $ do
             test "[1, 3, 5]" $ Right (iarray [1, 3, 5])

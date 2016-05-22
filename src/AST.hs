@@ -63,7 +63,7 @@ data Expr =
     | BinOp Expr BinOp Expr -- 2 + 3
       deriving (Show)
 
-data BinOp = Plus | Minus deriving (Show)
+data BinOp = Plus | Minus | Modulo deriving (Show)
 
 data Value = Sym Symbol | Int Integer | Arr [Value] deriving (Eq, Show)
 

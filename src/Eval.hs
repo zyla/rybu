@@ -63,6 +63,7 @@ evalExpr env (BinOp e1 op e2) = join $ evalBinOp op <$> evalExpr env e1 <*> eval
   where
     evalBinOp Plus (Int i1) (Int i2) = pure $ Int (i1 + i2)
     evalBinOp Minus (Int i1) (Int i2) = pure $ Int (i1 - i2)
+    evalBinOp Modulo (Int i1) (Int i2) = pure $ Int (i1 `mod` i2)
 
     evalBinOp Plus (Arr a1) (Arr a2) = pure $ Arr (a1 ++ a2)
 

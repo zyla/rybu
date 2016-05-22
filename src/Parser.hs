@@ -77,9 +77,13 @@ additiveOp =
       pure Plus <* reservedOp "+"
   <|> pure Minus <* reservedOp "-"
 
+multiplicativeOp =
+      pure Modulo <* reservedOp "%"
+
 expr = buildExpressionParser table term <?> "expression"
 table =
     [ [Postfix arrayIndexOrSlice]
+    , [Infix (flip BinOp <$> multiplicativeOp) AssocLeft]
     , [Infix (flip BinOp <$> additiveOp) AssocLeft]
     ]
 
