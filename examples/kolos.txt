@@ -1,17 +1,17 @@
 server semaphore {
     var state : {up, down};
 
-    {p | state = up} -> {state = down}
-    {v} -> {state = up}
+    {p | state = :up} -> {state = :down}
+    {v} -> {state = :up}
 }
 
-var sk = semaphore() {state = up};
-var wolne_miejsce = semaphore() {state = up};
-var brak_niezatw = semaphore() {state = up};
-var jest_niezatw = semaphore() {state = down};
-var do_odbioru = semaphore() {state = down};
-var ostatnioNP = semaphore() {state = down};
-var ostatnioP = semaphore() {state = up};
+var sk = semaphore() {state = :up};
+var wolne_miejsce = semaphore() {state = :up};
+var brak_niezatw = semaphore() {state = :up};
+var jest_niezatw = semaphore() {state = :down};
+var do_odbioru = semaphore() {state = :down};
+var ostatnioNP = semaphore() {state = :down};
+var ostatnioP = semaphore() {state = :up};
 
 process producer() {
     loop {
