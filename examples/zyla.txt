@@ -1,0 +1,127 @@
+const BUFSIZE = 3;
+const K = 1;
+const NUM_CONSUMERS = 2;
+
+server semaphore {
+    var state : {up, down};
+
+    { p | state = :up } -> {state = :down}
+    { v } -> {state = :up}
+}
+
+server multi_sem {
+    var value : 0..BUFSIZE;
+
+    { p | value > 0 } -> { value = value - 1 }
+    { v | value < BUFSIZE } -> { value = value + 1 }
+    { v | value = BUFSIZE } -> { ok }
+}
+
+server buf {
+    var count : 0..BUFSIZE;
+    
+    { put | count < BUFSIZE } -> { count = count + 1 }
+
+    { remove | count > 0 } -> { count = count - 1 }
+
+    { wakeup_after_produce | count = K + 1 } -> { true }
+    { wakeup_after_produce | count != K + 1 } -> { false }
+
+    { can_consume | count > K } -> { true }
+    { can_consume | count <= K } -> { false }
+}
+
+server read_counter {
+    var read_by : 0..NUM_CONSUMERS;
+
+    { increment | read_by = NUM_CONSUMERS - 1 } -> { true; read_by = read_by + 1 }
+    { increment | read_by < NUM_CONSUMERS - 1 } -> { false; read_by = read_by + 1 }
+
+    { reset } -> { read_by = 0 }
+}
+
+var buf = buf() { count = 0 };
+var mutex = semaphore() { state = :up };
+var write_slots = multi_sem() { value = BUFSIZE };
+
+var consumer_a_can_read = semaphore() { state = :down };
+var consumer_b_can_read = semaphore() { state = :down };
+
+process producer() {
+    loop {
+        write_slots.p();
+        mutex.p();
+
+        buf.put();
+
+        match buf.wakeup_after_produce() {
+            :true => {
+                consumer_a_can_read.v();
+                consumer_b_can_read.v();
+            }
+            :false => skip;
+        }
+
+        mutex.v();
+    }
+}
+
+process consumer_a() {
+    loop {
+        consumer_a_can_read.p();
+        mutex.p();
+
+        -- buf.peek();
+
+        match read_by.increment() {
+            :true => { -- saturated
+                buf.remove();
+
+                read_by.reset();
+
+                match buf.can_consume() {
+                    :true => {
+                        consumer_a_can_read.v();
+                        consumer_b_can_read.v();
+                    }
+                    :false => skip;
+                }
+
+                write_slots.v();
+            }
+            :false => skip;
+        }
+
+        mutex.v();
+    }
+}
+
+process consumer_b() {
+    loop {
+        consumer_b_can_read.p();
+        mutex.p();
+
+        -- buf.peek();
+
+        match read_by.increment() {
+            :true => { -- saturated
+                buf.remove();
+
+                read_by.reset();
+
+                match buf.can_consume() {
+                    :true => {
+                        consumer_a_can_read.v();
+                        consumer_b_can_read.v();
+                    }
+                    :false => skip;
+                }
+
+                write_slots.v();
+            }
+            :false => skip;
+        }
+
+        mutex.v();
+    }
+}
