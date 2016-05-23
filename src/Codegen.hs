@@ -73,7 +73,7 @@ generateDedan Model{..} = execWriterT $ do
     forM_ model_serverInstances $ \(ServerInstance name _ initEnvExpr) -> do
         tells ["  ", name, "("]
         tell $ intercalate "," (map procServerName procNames ++ map procAgentName procNames)
-        initEnv <- lift $ (traverse . traverseSecond) (evalExpr M.empty) initEnvExpr
+        initEnv <- lift $ (traverse . traverseSecond) (evalExpr globalEnv) initEnvExpr
         tells [").", encodeState initEnv, ",\n"]
 
     forM_ compiledProcs $ \CompiledProc{..} -> do
