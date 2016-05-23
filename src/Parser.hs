@@ -43,13 +43,14 @@ simpleType =
 transition = do
     (message, pred) <- braces $ (,) <$> messageSig <*>
         (reservedOp "|" *> predicate <|> pure (BoolLit True))
+    ndParams <- option [] $ reserved "for" *> parens (formalParam `sepBy` comma)
     reservedOp "->"
     (maybeOutSignal, assignments) <- try (braces retvalOnly) <|>
         (braces $ do
             maybeOutSignal <- optionMaybe (try $ identifier <* semicolon)
             (,) maybeOutSignal <$> (assign `sepBy` comma))
 
-    return $ Transition message pred maybeOutSignal assignments
+    return $ Transition message pred ndParams maybeOutSignal assignments
   where
     retvalOnly = flip (,) [] . Just <$> identifier
 

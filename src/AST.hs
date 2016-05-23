@@ -21,6 +21,7 @@ data Server = Server
 data Transition = Transition
     { t_sig :: MessageSig
     , t_pred :: Predicate
+    , t_ndParams :: [(Symbol, TypeExpr)]
     , t_reply :: Maybe Symbol
     , t_update :: [(LHS, Expr)]
     } deriving (Show)

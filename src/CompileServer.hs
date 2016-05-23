@@ -34,8 +34,8 @@ compileServer server@Server{..} = do
     let encode = encodeState . M.toList
         serverEnv = symbols typeEnv
 
-        compileTransition :: Transition -> EM [[ServerAction]]
-        compileTransition (Transition msgSig pred maybeOutSignal assignment) = do
+        compileTransition :: Transition -> EM [ServerAction]
+        compileTransition (Transition msgSig pred ndParamsE maybeOutSignal assignment) = fmap (concat . concat) $ do
             params <- traverse (\(name, typeE) -> (,) name <$> evalType serverEnv typeE) (ms_params msgSig)
 
             forM (allStates params) $ \paramValues -> do
@@ -44,41 +44,47 @@ compileServer server@Server{..} = do
                 states <- matchingStates paramsEnv pred typeEnv
 
                 forM states $ \state -> do
-                    let env = M.union paramsEnv state
-                        outSignal = fromMaybe "ok" maybeOutSignal
+                    let stateEnv = state `M.union` paramsEnv
 
-                        applyUpdate updatedEnv (LHS var indexes, expr) = do
-                            oldToplevelVal <- lookupVal state var
+                    ndParams <- traverse (\(name, typeE) -> (,) name <$> evalType stateEnv typeE) ndParamsE
 
-                            newVal <- evalExpr env expr
+                    forM (allStates ndParams) $ \ndParamValues -> do
+                        let env = M.fromList ndParamValues `M.union` stateEnv
 
-                            let updateArray indexE old f = do
-                                    arr <- requireArray old
-                                    index <- evalExpr env indexE >>= requireInt
-                                    newVal <- f (arr !! index)
-                                    pure (Arr $ listSet index newVal arr)
+                            outSignal = fromMaybe "ok" maybeOutSignal
 
-                                updateIndexes [] old f = f old
-                                updateIndexes (i:is) old f = updateArray i old (\v -> updateIndexes is v f)
+                            applyUpdate updatedEnv (LHS var indexes, expr) = do
+                                oldToplevelVal <- lookupVal state var
 
-                            newToplevelVal <- updateIndexes indexes oldToplevelVal (\_ -> pure newVal)
+                                newVal <- evalExpr env expr
 
-                            toplevelType <- lookupType var typeEnv
-                            checkType toplevelType newToplevelVal
+                                let updateArray indexE old f = do
+                                        arr <- requireArray old
+                                        index <- evalExpr env indexE >>= requireInt
+                                        newVal <- f (arr !! index)
+                                        pure (Arr $ listSet index newVal arr)
 
-                            pure (M.insert var newToplevelVal updatedEnv)
+                                    updateIndexes [] old f = f old
+                                    updateIndexes (i:is) old f = updateArray i old (\v -> updateIndexes is v f)
 
-                    updates <- foldM applyUpdate state assignment
+                                newToplevelVal <- updateIndexes indexes oldToplevelVal (\_ -> pure newVal)
 
-                    pure ServerAction
-                        { sa_inMessage = encodeMessage (ms_name msgSig) (map snd paramValues)
-                        , sa_inState = encode state
-                        , sa_outMessage = outSignal
-                        , sa_outState = encode (M.union updates state)
-                        }
+                                toplevelType <- lookupType var typeEnv
+                                checkType toplevelType newToplevelVal
+
+                                pure (M.insert var newToplevelVal updatedEnv)
+
+                        updates <- foldM applyUpdate state assignment
+
+                        pure ServerAction
+                            { sa_inMessage = encodeMessage (ms_name msgSig) (map snd paramValues)
+                            , sa_inState = encode state
+                            , sa_outMessage = outSignal
+                            , sa_outState = encode (M.union updates state)
+                            }
                     
 
-    actions <- (concat . concat) <$> mapM compileTransition server_transitions
+    actions <- concat <$> mapM compileTransition server_transitions
 
     pure CompiledServer
         { cs_name = server_name

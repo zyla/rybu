@@ -69,6 +69,19 @@ spec = describe "compileServer" $ do
 
         assertEqual "" expected cs_actions
 
+    it "should handle nondeterministic params" $ do
+        let CompiledServer{..} = compileServer' [r|
+            server counter {
+                var val : 1..3;
+                { set | val = 1 } for (new_val : 1..3) -> { val = new_val }
+            }
+        |]
+
+        let expected = for [1..3] $ \index ->
+                ServerAction "set" "val_1" "ok" ("val_" ++ show index) 
+
+        assertEqual "" expected cs_actions
+
     it "should handle array updates" $ do
         let CompiledServer{..} = compileServer' [r|
             server counter {
