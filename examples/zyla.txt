@@ -44,6 +44,8 @@ var buf = buf() { count = 0 };
 var mutex = semaphore() { state = :up };
 var write_slots = multi_sem() { value = BUFSIZE };
 
+var read_by = read_counter() { read_by = 0 };
+
 var consumer_a_can_read = semaphore() { state = :down };
 var consumer_b_can_read = semaphore() { state = :down };
 
