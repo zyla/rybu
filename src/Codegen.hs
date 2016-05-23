@@ -14,8 +14,14 @@ generateDedan :: Model -> EM String
 generateDedan Model{..} = execWriterT $ do
     let procNames = map process_name model_procs
 
-    compiledProcs <- lift $ mapM compileProcess model_procs
-    compiledServers <- lift $ mapM compileServer model_servers
+    let evalConst env (name, expr) = do
+            val <- evalExpr env expr
+            pure (M.insert name val env)
+
+    globalEnv <- lift $ foldM evalConst M.empty model_constants
+
+    compiledProcs <- lift $ mapM (compileProcess globalEnv) model_procs
+    compiledServers <- lift $ mapM (compileServer globalEnv) model_servers
 
     forM_ compiledServers $ \server@CompiledServer{..} -> do
         serverHeader cs_name

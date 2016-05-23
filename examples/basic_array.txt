@@ -1,8 +1,11 @@
-server buf {
-    var data : (0..2)[5];
-    var count : 0..5;
+const N = 4;
+const MAX = 2;
 
-    { put(elem : 0..2) | count < 5 } -> {
+server buf {
+    var data : (0..MAX)[N];
+    var count : 0..N;
+
+    { put(elem : 0..MAX) | count < N } -> {
         data[count] = elem,
         count = count + 1
     }

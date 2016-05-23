@@ -2,6 +2,8 @@ module CompileProcSpec where
 
 import TestImport
 
+import qualified Data.Map as M
+
 import qualified Parser
 import CompileProc
 import AST
@@ -28,6 +30,6 @@ spec = describe "compileProc" $ do
 
 compileProc' source =
     let process = unsafeParse Parser.process source
-    in case compileProcess process of
+    in case compileProcess M.empty process of
         Right process -> process
         Left err -> error $ "compileProcess error: " ++ show err

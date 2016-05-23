@@ -108,9 +108,15 @@ arrayIndexOrSlice = brackets $ do
      ) <|> pure (\arrayE -> ArrayIndex arrayE index1)
 
 model = Model
-    <$> many server
+    <$> many globalConst
+    <*> many server
     <*> many serverInstance
     <*> many process
+
+globalConst = do
+    reserved "const"
+    (,) <$> identifier <*> (reservedOp "=" *> expr <* semicolon)
+    
 
 serverInstance = ServerInstance
     <$> (reserved "var" *> identifier)

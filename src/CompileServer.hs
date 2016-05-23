@@ -24,15 +24,13 @@ data ServerAction = ServerAction
     , sa_outState :: Symbol
     } deriving (Eq, Show)
 
-compileServer :: Server -> EM CompiledServer
-compileServer server@Server{..} = do
-    let env = M.empty
-        
+compileServer :: Env -> Server -> EM CompiledServer
+compileServer env server@Server{..} = do
     typeEnv <- fmap M.fromList $ forM server_vars $ \(name, typeE) ->
         (,) name <$> evalType env typeE
 
     let encode = encodeState . M.toList
-        serverEnv = symbols typeEnv
+        serverEnv = symbols typeEnv `M.union` env
 
         compileTransition :: Transition -> EM [ServerAction]
         compileTransition (Transition msgSig pred ndParamsE maybeOutSignal assignment) = fmap (concat . concat) $ do

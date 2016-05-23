@@ -2,6 +2,8 @@ module CompileServerSpec where
 
 import TestImport
 
+import qualified Data.Map as M
+
 import qualified Parser
 import CompileServer
 import Err
@@ -111,12 +113,12 @@ for = flip map
 
 compileServer' source =
     let server = unsafeParse Parser.server source
-    in case compileServer server of
+    in case compileServer M.empty server of
         Right server -> server
         Left err -> error $ "compileServer error: " ++ show err
 
 shouldFail source err =
     let server = unsafeParse Parser.server source
-    in assertEqual source (Left err) (compileServer server)
+    in assertEqual source (Left err) (compileServer M.empty server)
 
 shouldCompile source = compileServer' source `seq` (pure () :: Assertion)

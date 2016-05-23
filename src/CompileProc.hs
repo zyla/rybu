@@ -20,12 +20,12 @@ data CompiledProc = CompiledProc
     , cp_transitions :: [(Symbol, Symbol, Symbol, Symbol, Symbol)]
     } deriving (Show)
 
-compileProcess :: AST.Process -> EM CompiledProc
-compileProcess (Process name stmt) = do
+compileProcess :: Env -> AST.Process -> EM CompiledProc
+compileProcess globalEnv (Process name stmt) = do
     let ((initial, final), cfg) = compile $ desugar stmt
 
         encodeT (T state input (nextState, Message{..})) = do
-            paramValues <- mapM (evalExpr M.empty) message_params
+            paramValues <- mapM (evalExpr globalEnv) message_params
             pure (encodeStateId cfg state, input,
                   message_server, encodeMessage message_msg paramValues,
                   encodeStateId cfg nextState)

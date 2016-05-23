@@ -5,7 +5,8 @@ type Symbol = String
 -- Model
 
 data Model = Model
-    { model_servers :: [Server]
+    { model_constants :: [(Symbol, Expr)]
+    , model_servers :: [Server]
     , model_serverInstances :: [ServerInstance]
     , model_procs :: [Process]
     } deriving (Show)
