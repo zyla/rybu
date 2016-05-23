@@ -18,17 +18,19 @@ server buffer {
     var count : 0..4;
 
 --    {put(elem: 0..1) | count = 4} -> {ASSERTION_FAILED}
-    {put(elem: 0..1) | sum < 4 && count < 4 } -> {
-                                        data[count] = elem
-                                      , count = count + 1
-                                      , sum = sum + elem
-                                      }
+
+    {put | sum < 4 && count < 4 } for (elem : 0..1) ->
+        { data[count] = elem
+        , count = count + 1
+        , sum = sum + elem
+        }
 
 --    {get | count < 2} -> {ASSERTION_FAILED}
-    {get | sum >= data[0] && count >= 2 } -> { count = count - 1
-                                 , sum = sum - data[0]
-                                 , data = data[1..3] + [0]
-                                 }
+    {get | sum >= data[0] && count >= 2 } ->
+        { count = count - 1
+        , sum = sum - data[0]
+        , data = data[1..3] + [0]
+        }
 
     {canRead | count < 2} -> {false}
     {canRead | count >= 2} -> {true}
@@ -90,7 +92,7 @@ process producerB() {
             }
             :true => skip;
         }
-        buffer.put(1); -- TODO: random
+        buffer.put();
         match buffer.canRead() {
             :true => cs.v();
             :false => skip;
@@ -119,7 +121,7 @@ process producerA() {
                 :true => skip;
             }
         }
-        buffer.put(0); -- TODO: random
+        buffer.put();
         match buffer.canRead() {
             :true => cs.v();
             :false => skip;
