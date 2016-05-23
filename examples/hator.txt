@@ -1,0 +1,140 @@
+server semaphore {
+    var state : {up, down};
+
+    {p | state = :up} -> {state = :down}
+    {v} -> {state = :up}
+}
+
+server semaphoreM {
+    var state : 0..4;
+    {p | state > 0} -> {state = state - 1}
+    {v | state < 4} -> {state = state + 1}
+    {v | state = 4} -> {ok}
+}
+
+server buffer {
+    var data : (0..1)[4];
+    var first : 0..3;
+    var new : 0..3;
+    var sum : 0..4;
+    var count : 0..4;
+
+--    {put(elem: 0..1) | count = 4} -> {ASSERTION_FAILED}
+    {put(elem: 0..1) | sum < 4 && count < 4 && (new+1)%4 = first} -> { count = count + 1
+                                      , data[new] = elem
+                                      , sum = sum + elem
+                                      , new = (new+1) % 4
+                                      }
+    {put(elem: 0..1) | sum < 4 && count < 4 && (new+1)%4 != first } -> { count = count + 1
+                  , data[new] = elem
+                  , sum = sum + elem
+                  , new = new % 4
+                  }
+
+--    {get | count < 2} -> {ASSERTION_FAILED}
+    {get | sum >= data[first] && count >= 2 && (first+1)%4 = new} -> { count = count - 1
+                                 , sum = sum - data[first]
+                                 , first = (first+1)%4
+                                 }
+    {get | sum >= data[first] && count >=2 && (first+1)%4 != new} -> { count = count - 1
+             , sum = sum - data[first]
+             , first = (first+1)%4
+             }
+
+    {canRead | count < 2} -> {false}
+    {canRead | count >= 2} -> {true}
+
+    {pAcondition | sum > 2} -> {false}
+    {pAcondition | sum <= 2} -> {true}
+
+    {canWrite | count < 4} -> {true}
+    {canWrite | count = 4} -> {false}
+}
+
+server bool {
+    var val : {true, false};
+
+    { set(new_val : {true, false}) } -> { val = new_val }
+
+    { get | val = :true } -> { true }
+    { get | val = :false } -> { false }
+}
+
+var buffer = buffer() { count = 0, data = [4; 0], first = 0, new = 0, sum = 0 };
+var s = semaphore() {state = :up};
+var cs = semaphoreM() {state = 0};
+var pAs = semaphore() {state = :down};
+var pBs = semaphore() {state = :down};
+var pAwaiting = bool() { val = :false };
+var pBwaiting = bool() { val = :false };
+
+process consumer() {
+    loop {
+        cs.p();
+        s.p();
+        buffer.get();
+        match pAwaiting.get() {
+            :true => match buffer.pAcondition() {
+                :true => pAs.v();
+                :false => match pBwaiting.get() {
+                    :true => pBs.v();
+                    :false => s.v();
+                }
+            }
+            :false => match pBwaiting.get() {
+                :true => pBs.v();
+                :false => s.v();
+            }
+        }
+    }
+}
+
+process producerB() {
+    loop {
+        s.p();
+        match buffer.canWrite() {
+            :false => {
+                pBwaiting.set(:true);
+                s.v();
+                pBs.p();
+                pBwaiting.set(:false);
+            }
+            :true => skip;
+        }
+        buffer.put(1); -- TODO: random
+        match buffer.canRead() {
+            :true => cs.v();
+            :false => skip;
+        }
+        s.v();
+    }
+}
+
+process producerA() {
+    loop {
+        s.p();
+        match buffer.canWrite() {
+            :false => {
+                pAwaiting.set(:true);
+                s.v();
+                pAs.p();
+                pAwaiting.set(:false);
+            }
+            :true => match buffer.pAcondition() {
+                :false => {
+                    pAwaiting.set(:true);
+                    s.v();
+                    pAs.p();
+                    pAwaiting.set(:false);
+                }
+                :true => skip;
+            }
+        }
+        buffer.put(0); -- TODO: random
+        match buffer.canRead() {
+            :true => cs.v();
+            :false => skip;
+        }
+        s.v();
+    }
+}
