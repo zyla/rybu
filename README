@@ -1,4 +1,4 @@
 Running:
 
     stack build
-    stack exec dedan < kolos.txt
+    stack exec rybu < examples/kolos.txt
