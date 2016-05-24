@@ -2,3 +2,5 @@ Running:
 
     stack build
     stack exec rybu < examples/kolos.txt
+
+New to Haskell or Stack? See http://docs.haskellstack.org/en/stable/README/#how-to-install
