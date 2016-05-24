@@ -3,6 +3,8 @@ module TestImport (
   , module X
 ) where
 
+import Control.Monad as X
+
 import Test.Hspec as X
 import Test.HUnit as X
 

@@ -1,6 +1,7 @@
 module CompileServerSpec where
 
 import TestImport
+import Control.Arrow (left)
 
 import qualified Data.Map as M
 
@@ -119,6 +120,10 @@ compileServer' source =
 
 shouldFail source err =
     let server = unsafeParse Parser.server source
-    in assertEqual source (Left err) (compileServer M.empty server)
+    in assertEqual source (Left err) $ left stripContext $ compileServer M.empty server
+
+stripContext :: Err -> Err
+stripContext (Context _ e) = stripContext e
+stripContext e = e
 
 shouldCompile source = compileServer' source `seq` (pure () :: Assertion)

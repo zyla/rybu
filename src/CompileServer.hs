@@ -25,15 +25,17 @@ data ServerAction = ServerAction
     } deriving (Eq, Show)
 
 compileServer :: Env -> Server -> EM CompiledServer
-compileServer env server@Server{..} = do
+compileServer env server@Server{..} = withContext ("in server " ++ server_name) $ do
     typeEnv <- fmap M.fromList $ forM server_vars $ \(name, typeE) ->
-        (,) name <$> evalType env typeE
+        withContext ("in type of var " ++ name) $
+            (,) name <$> evalType env typeE
 
     let encode = encodeState . M.toList
         serverEnv = symbols typeEnv `M.union` env
 
         compileTransition :: Transition -> EM [ServerAction]
-        compileTransition (Transition msgSig pred ndParamsE maybeOutSignal assignment) = fmap (concat . concat) $ do
+        compileTransition (Transition msgSig pred ndParamsE maybeOutSignal assignment) =
+          fmap (concat . concat) $ withContext ("in action " ++ ms_name msgSig) $ do
             params <- traverse (\(name, typeE) -> (,) name <$> evalType serverEnv typeE) (ms_params msgSig)
 
             forM (allStates params) $ \paramValues -> do
@@ -41,7 +43,7 @@ compileServer env server@Server{..} = do
 
                 states <- matchingStates paramsEnv pred typeEnv
 
-                forM states $ \state -> do
+                forM states $ \state -> withContext ("for state " ++ ppEnv state) $ do
                     let stateEnv = state `M.union` paramsEnv
 
                     ndParams <- traverse (\(name, typeE) -> (,) name <$> evalType stateEnv typeE) ndParamsE
@@ -54,25 +56,27 @@ compileServer env server@Server{..} = do
                             applyUpdate updatedEnv (LHS var indexes, expr) = do
                                 oldToplevelVal <- lookupVal state var
 
-                                newVal <- evalExpr env expr
+                                withContext ("in assignment of variable " ++ show var) $ do
+                                    newVal <- evalExpr env expr
 
-                                let updateArray indexE old f = do
-                                        arr <- requireArray old
-                                        index <- evalExpr env indexE >>= requireInt
-                                        newVal <- f (arr !! index)
-                                        pure (Arr $ listSet index newVal arr)
+                                    let updateArray indexE old f = do
+                                            arr <- requireArray old
+                                            index <- evalExpr env indexE >>= requireInt
+                                            newVal <- f (arr !! index)
+                                            pure (Arr $ listSet index newVal arr)
 
-                                    updateIndexes [] old f = f old
-                                    updateIndexes (i:is) old f = updateArray i old (\v -> updateIndexes is v f)
+                                        updateIndexes [] old f = f old
+                                        updateIndexes (i:is) old f = updateArray i old (\v -> updateIndexes is v f)
 
-                                newToplevelVal <- updateIndexes indexes oldToplevelVal (\_ -> pure newVal)
+                                    newToplevelVal <- updateIndexes indexes oldToplevelVal (\_ -> pure newVal)
 
-                                toplevelType <- lookupType var typeEnv
-                                checkType toplevelType newToplevelVal
+                                    toplevelType <- lookupType var typeEnv
+                                    checkType toplevelType newToplevelVal
 
-                                pure (M.insert var newToplevelVal updatedEnv)
+                                    pure (M.insert var newToplevelVal updatedEnv)
 
-                        updates <- foldM applyUpdate state assignment
+                        updates <- withContext "when evaluating updates" $
+                            foldM applyUpdate state assignment
 
                         pure ServerAction
                             { sa_inMessage = encodeMessage (ms_name msgSig) (map snd paramValues)
@@ -119,7 +123,10 @@ symbols = M.fromList . concatMap varSyms . M.elems
 
 matchingStates :: Env -> Predicate -> TypeEnv -> EM [Env]
 matchingStates upperEnv pred types =
-    let matches env = evalPredicate (env `M.union` upperEnv) pred
+    let matches env =
+            withContext ("when evaluating predicate for state " ++ ppEnv env) $
+                evalPredicate (env `M.union` upperEnv) pred
+
     in filterM matches (map M.fromList $ allStates $ M.toList types)
 
 checkType :: Type -> Value -> EM ()

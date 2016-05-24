@@ -6,6 +6,7 @@ import System.IO
 import System.Exit
 import Parser (parseModel)
 import Codegen
+import Err
 
 main = getContents >>= processModelFile
 
@@ -20,7 +21,7 @@ processModelFile file =
 
       case generateDedan model of
         Left err -> do
-          hPutStrLn stderr $ "Error: " ++ show err
+          hPutStrLn stderr $ "Error: " ++ ppError err
           exitWith (ExitFailure 1)
 
         Right source -> putStrLn source

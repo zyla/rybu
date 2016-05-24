@@ -21,7 +21,7 @@ data CompiledProc = CompiledProc
     } deriving (Show)
 
 compileProcess :: Env -> AST.Process -> EM CompiledProc
-compileProcess globalEnv (Process name stmt) = do
+compileProcess globalEnv (Process name stmt) = withContext ("in process " ++ show name) $ do
     let ((initial, final), cfg) = compile $ desugar stmt
 
         encodeT (T state input (nextState, Message{..})) = do

@@ -102,6 +102,11 @@ ppValue (Sym s) = s
 ppValue (Int i) = show i
 ppValue (Arr xs) = "[" ++ intercalate ", " (map ppValue xs) ++ "]"
 
+ppEnv :: Env -> String
+ppEnv env = "{" ++ intercalate "," (map ppVar $ M.toList env) ++ " }"
+  where
+    ppVar (key, value) = " " ++ key ++ " = " ++ ppValue value
+
 encodeValue :: Value -> String
 encodeValue (Sym s) = s
 encodeValue (Int i) = show i
