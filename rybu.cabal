@@ -20,6 +20,7 @@ library
                      , Err
                      , Eval
                      , Parser
+                     , Rybu
 
   build-depends:       base >= 4.7 && < 5
                      , parsec
