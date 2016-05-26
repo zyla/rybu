@@ -1,0 +1,85 @@
+server: semaphore (servers S_producer, S_approver, S_consumerP, S_consumerNP; agents A_producer, A_approver, A_consumerP, A_consumerNP),
+services {p, v},
+states {state_up, state_down},
+actions {
+  {A_producer.semaphore.p, semaphore.state_up} -> {A_producer.S_producer.ok, semaphore.state_down},
+  {A_producer.semaphore.v, semaphore.state_up} -> {A_producer.S_producer.ok, semaphore.state_up},
+  {A_producer.semaphore.v, semaphore.state_down} -> {A_producer.S_producer.ok, semaphore.state_up},
+  {A_approver.semaphore.p, semaphore.state_up} -> {A_approver.S_approver.ok, semaphore.state_down},
+  {A_approver.semaphore.v, semaphore.state_up} -> {A_approver.S_approver.ok, semaphore.state_up},
+  {A_approver.semaphore.v, semaphore.state_down} -> {A_approver.S_approver.ok, semaphore.state_up},
+  {A_consumerP.semaphore.p, semaphore.state_up} -> {A_consumerP.S_consumerP.ok, semaphore.state_down},
+  {A_consumerP.semaphore.v, semaphore.state_up} -> {A_consumerP.S_consumerP.ok, semaphore.state_up},
+  {A_consumerP.semaphore.v, semaphore.state_down} -> {A_consumerP.S_consumerP.ok, semaphore.state_up},
+  {A_consumerNP.semaphore.p, semaphore.state_up} -> {A_consumerNP.S_consumerNP.ok, semaphore.state_down},
+  {A_consumerNP.semaphore.v, semaphore.state_up} -> {A_consumerNP.S_consumerNP.ok, semaphore.state_up},
+  {A_consumerNP.semaphore.v, semaphore.state_down} -> {A_consumerNP.S_consumerNP.ok, semaphore.state_up},
+};
+
+server: S_producer (servers sk: semaphore, wolne_miejsce: semaphore, brak_niezatw: semaphore, jest_niezatw: semaphore, do_odbioru: semaphore, ostatnioNP: semaphore, ostatnioP: semaphore; agents A_producer),
+services {ok},
+states {s0_wolne_miejsce_p, s12_sk_v, s3_brak_niezatw_p, s6_sk_p, s9_jest_niezatw_v},
+actions {
+  {A_producer.S_producer.ok, S_producer.s0_wolne_miejsce_p} -> {A_producer.brak_niezatw.p, S_producer.s3_brak_niezatw_p},
+  {A_producer.S_producer.ok, S_producer.s3_brak_niezatw_p} -> {A_producer.sk.p, S_producer.s6_sk_p},
+  {A_producer.S_producer.ok, S_producer.s6_sk_p} -> {A_producer.jest_niezatw.v, S_producer.s9_jest_niezatw_v},
+  {A_producer.S_producer.ok, S_producer.s9_jest_niezatw_v} -> {A_producer.sk.v, S_producer.s12_sk_v},
+  {A_producer.S_producer.ok, S_producer.s12_sk_v} -> {A_producer.wolne_miejsce.p, S_producer.s0_wolne_miejsce_p},
+};
+
+server: S_approver (servers sk: semaphore, wolne_miejsce: semaphore, brak_niezatw: semaphore, jest_niezatw: semaphore, do_odbioru: semaphore, ostatnioNP: semaphore, ostatnioP: semaphore; agents A_approver),
+services {ok},
+states {s0_jest_niezatw_p, s3_sk_p, s6_do_odbioru_v, s9_sk_v},
+actions {
+  {A_approver.S_approver.ok, S_approver.s0_jest_niezatw_p} -> {A_approver.sk.p, S_approver.s3_sk_p},
+  {A_approver.S_approver.ok, S_approver.s3_sk_p} -> {A_approver.do_odbioru.v, S_approver.s6_do_odbioru_v},
+  {A_approver.S_approver.ok, S_approver.s6_do_odbioru_v} -> {A_approver.sk.v, S_approver.s9_sk_v},
+  {A_approver.S_approver.ok, S_approver.s9_sk_v} -> {A_approver.jest_niezatw.p, S_approver.s0_jest_niezatw_p},
+};
+
+server: S_consumerP (servers sk: semaphore, wolne_miejsce: semaphore, brak_niezatw: semaphore, jest_niezatw: semaphore, do_odbioru: semaphore, ostatnioNP: semaphore, ostatnioP: semaphore; agents A_consumerP),
+services {ok},
+states {s0_ostatnioNP_p, s12_wolne_miejsce_v, s15_sk_v, s3_do_odbioru_p, s6_sk_p, s9_ostatnioP_v},
+actions {
+  {A_consumerP.S_consumerP.ok, S_consumerP.s0_ostatnioNP_p} -> {A_consumerP.do_odbioru.p, S_consumerP.s3_do_odbioru_p},
+  {A_consumerP.S_consumerP.ok, S_consumerP.s3_do_odbioru_p} -> {A_consumerP.sk.p, S_consumerP.s6_sk_p},
+  {A_consumerP.S_consumerP.ok, S_consumerP.s6_sk_p} -> {A_consumerP.ostatnioP.v, S_consumerP.s9_ostatnioP_v},
+  {A_consumerP.S_consumerP.ok, S_consumerP.s9_ostatnioP_v} -> {A_consumerP.wolne_miejsce.v, S_consumerP.s12_wolne_miejsce_v},
+  {A_consumerP.S_consumerP.ok, S_consumerP.s12_wolne_miejsce_v} -> {A_consumerP.sk.v, S_consumerP.s15_sk_v},
+  {A_consumerP.S_consumerP.ok, S_consumerP.s15_sk_v} -> {A_consumerP.ostatnioNP.p, S_consumerP.s0_ostatnioNP_p},
+};
+
+server: S_consumerNP (servers sk: semaphore, wolne_miejsce: semaphore, brak_niezatw: semaphore, jest_niezatw: semaphore, do_odbioru: semaphore, ostatnioNP: semaphore, ostatnioP: semaphore; agents A_consumerNP),
+services {ok},
+states {s0_ostatnioP_p, s12_wolne_miejsce_v, s15_sk_v, s3_do_odbioru_p, s6_sk_p, s9_ostatnioNP_v},
+actions {
+  {A_consumerNP.S_consumerNP.ok, S_consumerNP.s0_ostatnioP_p} -> {A_consumerNP.do_odbioru.p, S_consumerNP.s3_do_odbioru_p},
+  {A_consumerNP.S_consumerNP.ok, S_consumerNP.s3_do_odbioru_p} -> {A_consumerNP.sk.p, S_consumerNP.s6_sk_p},
+  {A_consumerNP.S_consumerNP.ok, S_consumerNP.s6_sk_p} -> {A_consumerNP.ostatnioNP.v, S_consumerNP.s9_ostatnioNP_v},
+  {A_consumerNP.S_consumerNP.ok, S_consumerNP.s9_ostatnioNP_v} -> {A_consumerNP.wolne_miejsce.v, S_consumerNP.s12_wolne_miejsce_v},
+  {A_consumerNP.S_consumerNP.ok, S_consumerNP.s12_wolne_miejsce_v} -> {A_consumerNP.sk.v, S_consumerNP.s15_sk_v},
+  {A_consumerNP.S_consumerNP.ok, S_consumerNP.s15_sk_v} -> {A_consumerNP.ostatnioP.p, S_consumerNP.s0_ostatnioP_p},
+};
+
+agents A_producer, A_approver, A_consumerP, A_consumerNP;
+
+servers S_producer, S_approver, S_consumerP, S_consumerNP, sk: semaphore, wolne_miejsce: semaphore, brak_niezatw: semaphore, jest_niezatw: semaphore, do_odbioru: semaphore, ostatnioNP: semaphore, ostatnioP: semaphore;
+
+init -> {
+  sk(S_producer,S_approver,S_consumerP,S_consumerNP,A_producer,A_approver,A_consumerP,A_consumerNP).state_up,
+  wolne_miejsce(S_producer,S_approver,S_consumerP,S_consumerNP,A_producer,A_approver,A_consumerP,A_consumerNP).state_up,
+  brak_niezatw(S_producer,S_approver,S_consumerP,S_consumerNP,A_producer,A_approver,A_consumerP,A_consumerNP).state_up,
+  jest_niezatw(S_producer,S_approver,S_consumerP,S_consumerNP,A_producer,A_approver,A_consumerP,A_consumerNP).state_down,
+  do_odbioru(S_producer,S_approver,S_consumerP,S_consumerNP,A_producer,A_approver,A_consumerP,A_consumerNP).state_down,
+  ostatnioNP(S_producer,S_approver,S_consumerP,S_consumerNP,A_producer,A_approver,A_consumerP,A_consumerNP).state_down,
+  ostatnioP(S_producer,S_approver,S_consumerP,S_consumerNP,A_producer,A_approver,A_consumerP,A_consumerNP).state_up,
+  S_producer(sk,wolne_miejsce,brak_niezatw,jest_niezatw,do_odbioru,ostatnioNP,ostatnioP,A_producer).s0_wolne_miejsce_p,
+  A_producer.wolne_miejsce.p,
+  S_approver(sk,wolne_miejsce,brak_niezatw,jest_niezatw,do_odbioru,ostatnioNP,ostatnioP,A_approver).s0_jest_niezatw_p,
+  A_approver.jest_niezatw.p,
+  S_consumerP(sk,wolne_miejsce,brak_niezatw,jest_niezatw,do_odbioru,ostatnioNP,ostatnioP,A_consumerP).s0_ostatnioNP_p,
+  A_consumerP.ostatnioNP.p,
+  S_consumerNP(sk,wolne_miejsce,brak_niezatw,jest_niezatw,do_odbioru,ostatnioNP,ostatnioP,A_consumerNP).s0_ostatnioP_p,
+  A_consumerNP.ostatnioP.p,
+}.
+

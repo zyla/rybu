@@ -58,3 +58,17 @@ test-suite hspec-tests
   default-language:    Haskell2010
 
   default-extensions:  TemplateHaskell, QuasiQuotes, RecordWildCards
+
+test-suite examples-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             ExamplesTest.hs
+
+  build-depends:       base
+                     , rybu
+                     , directory
+                     , process
+                     , filepath
+
+  default-language:    Haskell2010
+  default-extensions:  RecordWildCards
