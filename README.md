@@ -1,12 +1,24 @@
 [![Build Status](https://travis-ci.org/zyla/rybu.svg?branch=master)](https://travis-ci.org/zyla/rybu)
 
-# What is Rybu
+**rybu** to prosty język kompilowany do modeli programu Dedan.
 
-Rybu is a preprocessor for Dedan model checker that provides alternative C-like syntax
+[Dokumentacja](https://github.com/zyla/rybu/wiki/Opis-sk%C5%82adni-Rybu)
 
-# Running
+Istnieje możliwość użycia programu z poziomu przeglądarki WWW, bez konieczności
+instalacji: http://zyla.neutrino.re/rybu/.
+
+## Kompilacja i uruchamianie lokalnie
+
+Program napisany jest w języku [Haskell](https://www.haskell.org).
+Przy użyciu narzędzia [stack](http://docs.haskellstack.org/en/stable/README/#how-to-install)
+kompilacja jest prosta:
 
     stack build
-    stack exec rybu < examples/kolos.txt
 
-New to Haskell or Stack? See http://docs.haskellstack.org/en/stable/README/#how-to-install
+Program przyjmuje plik wejściowy poprzez standardowe wejście i wypisuje wynikowy
+model na standardowy wyjście. Chcąc skompilować przykład `kolos.txt` należy
+wpisać:
+
+    stack exec rybu < examples/kolos.txt > kolos.dedan.txt
+
+Po czym plik `kolos.dedan.txt` należy załadować do programu Dedan.
