@@ -22,3 +22,7 @@ wpisać:
     stack exec rybu < examples/kolos.txt > kolos.dedan.txt
 
 Po czym plik `kolos.dedan.txt` należy załadować do programu Dedan.
+
+## Kontakt
+
+Pytania można zadać na kanale [#rybu na freenode](http://webchat.freenode.net/?channels=rybu)
