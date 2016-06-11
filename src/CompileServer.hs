@@ -1,6 +1,7 @@
 module CompileServer where
 
 import Control.Monad
+import qualified Control.Monad.State as MS
 import Data.Maybe (fromMaybe)
 import Data.List (intercalate, nub)
 import qualified Data.Set as S
@@ -11,10 +12,11 @@ import Err
 import Eval
 
 data CompiledServer = CompiledServer
-    { cs_name :: Symbol
+    { cs_name :: ServerName
     , cs_states :: [Symbol]
     , cs_services :: [Symbol]
     , cs_actions :: [ServerAction]
+    , cs_usedBy :: [ProcessName]
     } deriving (Eq, Show)
 
 data ServerAction = ServerAction
@@ -24,8 +26,11 @@ data ServerAction = ServerAction
     , sa_outState :: Symbol
     } deriving (Eq, Show)
 
-compileServer :: Env -> Server -> EM CompiledServer
-compileServer env server@Server{..} = withContext ("in server " ++ server_name) $ do
+type ServersUsage = M.Map ServerName [ProcessName]
+
+compileServer :: Env -> ServersUsage -> Server -> EM CompiledServer
+compileServer env serversUsage server@Server{..} =
+  withContext ("in server " ++ server_name) $ do
     typeEnv <- fmap M.fromList $ forM server_vars $ \(name, typeE) ->
         withContext ("in type of var " ++ name) $
             (,) name <$> evalType env typeE
@@ -84,7 +89,6 @@ compileServer env server@Server{..} = withContext ("in server " ++ server_name) 
                             , sa_outMessage = outSignal
                             , sa_outState = encode (M.union updates state)
                             }
-                    
 
     actions <- concat <$> mapM compileTransition server_transitions
 
@@ -93,7 +97,10 @@ compileServer env server@Server{..} = withContext ("in server " ++ server_name) 
         , cs_states = map encodeState (allStates $ M.toList typeEnv)
         , cs_services = nub (map sa_inMessage actions)
         , cs_actions = actions
+        , cs_usedBy = getUsedBy serversUsage server_name
         }
+    where
+       getUsedBy serversUsage server_name = maybe [] id $ M.lookup server_name serversUsage
 
 listSet :: Int -> a -> [a] -> [a]
 listSet 0 x (_:xs) = x:xs

@@ -11,10 +11,10 @@ import Err
 import Eval
 
 data CompiledProc = CompiledProc
-    { cp_name :: Symbol
+    { cp_name :: ProcessName
     , cp_states :: [Symbol]
     , cp_services :: [Symbol]
-    , cp_usedServers :: [Symbol]
+    , cp_usedServersInstances :: [ServerInstanceName]
     , cp_initialState :: Symbol
     , cp_initialMessage :: Message
     , cp_transitions :: [(Symbol, Symbol, Symbol, Symbol, Symbol)]
@@ -38,7 +38,7 @@ compileProcess globalEnv (Process name stmt) = withContext ("in process " ++ sho
         { cp_name = name
         , cp_states = dedup $ map (encodeStateId cfg . t_state) ts
         , cp_services = dedup $ map t_in_message ts
-        , cp_usedServers = dedup $ map (message_server . snd . t_cont) ts
+        , cp_usedServersInstances = dedup $ map (message_server . snd . t_cont) ts
         , cp_initialState = encodeStateId cfg initialState
         , cp_initialMessage = initialMessage
         , cp_transitions = encodedTs

@@ -12,9 +12,10 @@ data Model = Model
     } deriving (Show)
 
 -- Server
+type ServerName = Symbol
 
 data Server = Server
-    { server_name :: Symbol
+    { server_name :: ServerName
     , server_vars :: [(Symbol, TypeExpr)]
     , server_transitions :: [Transition]
     } deriving (Show)
@@ -72,20 +73,23 @@ data BinOp = Plus | Minus | Modulo deriving (Show)
 
 data Value = Sym Symbol | Int Integer | Arr [Value] deriving (Eq, Show)
 
+type ServerInstanceName = Symbol
+
 data ServerInstance = ServerInstance
-    { si_name :: Symbol
-    , si_serverType :: Symbol
+    { si_name :: ServerInstanceName
+    , si_serverType :: ServerName
     , si_initialState :: [(Symbol, Expr)]
     } deriving (Show)
 
 -- Process
+type ProcessName = Symbol
 
 data Process = Process
-    { process_name :: Symbol
+    { process_name :: ProcessName
     , process_stmt :: Statement
     } deriving (Show)
 
 data Statement = Skip | Loop Statement | Block [Statement] | Msg Message | Match Message [(Symbol, Statement)]
     deriving (Show)
 
-data Message = Message { message_server :: Symbol, message_msg :: Symbol, message_params :: [Expr] } deriving (Show)
+data Message = Message { message_server :: ServerName, message_msg :: Symbol, message_params :: [Expr] } deriving (Show)

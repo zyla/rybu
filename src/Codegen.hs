@@ -1,6 +1,7 @@
 module Codegen where
 
 import Control.Monad.Writer
+import qualified Control.Monad.State as MS
 import qualified Data.Map as M
 import Data.List (intercalate, nub)
 
@@ -21,7 +22,8 @@ generateDedan Model{..} = execWriterT $ do
     globalEnv <- lift $ foldM evalConst M.empty model_constants
 
     compiledProcs <- lift $ mapM (compileProcess globalEnv) model_procs
-    compiledServers <- lift $ mapM (compileServer globalEnv) model_servers
+    let serversUsage = serversUsageFromProcs model_serverInstances compiledProcs
+    compiledServers <- lift $ mapM (compileServer globalEnv serversUsage) model_servers
 
     forM_ compiledServers $ \server@CompiledServer{..} -> do
         serverHeader cs_name
@@ -32,7 +34,8 @@ generateDedan Model{..} = execWriterT $ do
 
         tellLn "actions {"
 
-        forM_ procNames $ \procName ->
+        -- TODO(hator): warn if cs_usedBy is 0, means server is not used by any process
+        forM_ cs_usedBy $ \procName ->
             forM_ cs_actions $ \ServerAction
                     {sa_inMessage=in_msg, sa_inState=in_state, sa_outMessage=out_msg, sa_outState=out_state} ->
                 let agent = procAgentName procName
@@ -114,3 +117,22 @@ tells = tell . concat
 
 tellLn :: Monad m => String -> WriterT String m ()
 tellLn str = tell str >> tell "\n"
+
+serversUsageFromProcs :: [ServerInstance] -> [CompiledProc] -> ServersUsage
+serversUsageFromProcs instances procs = MS.execState (forM_ procs collectServers) M.empty
+    where
+        collectServers :: CompiledProc -> MS.State ServersUsage ()
+        collectServers CompiledProc{..} = forM_ cp_usedServersInstances $ addServer cp_name . serverNameFromInstance
+
+        addServer :: ProcessName -> ServerName -> MS.State ServersUsage ()
+        addServer procN serverN = MS.modify $ M.insertWith (++) serverN [procN]
+
+        serverNameFromInstance :: ServerInstanceName -> ServerName
+        serverNameFromInstance name =
+            maybe "" id $ si_serverType <$> findServerInstance instances name
+
+        findServerInstance :: [ServerInstance] -> ServerInstanceName -> Maybe ServerInstance
+        findServerInstance [] name = Nothing
+        findServerInstance (i:is) name = if (si_name i) == name
+                                            then Just i
+                                            else findServerInstance is name
