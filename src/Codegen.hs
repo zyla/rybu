@@ -3,6 +3,7 @@ module Codegen where
 import Control.Monad.Writer
 import qualified Control.Monad.State as MS
 import qualified Data.Map as M
+import qualified Data.Set as S
 import Data.List (intercalate, nub)
 
 import AST
@@ -119,13 +120,14 @@ tellLn :: Monad m => String -> WriterT String m ()
 tellLn str = tell str >> tell "\n"
 
 serversUsageFromProcs :: [ServerInstance] -> [CompiledProc] -> ServersUsage
-serversUsageFromProcs instances procs = MS.execState (forM_ procs collectServers) M.empty
+serversUsageFromProcs instances procs = M.map S.toList $ MS.execState (forM_ procs collectServers) M.empty
     where
-        collectServers :: CompiledProc -> MS.State ServersUsage ()
-        collectServers CompiledProc{..} = forM_ cp_usedServersInstances $ addServer cp_name . serverNameFromInstance
+        collectServers :: CompiledProc -> MS.State (M.Map ServerName (S.Set ProcessName)) ()
+        collectServers CompiledProc{..} =
+            forM_ cp_usedServersInstances $ addServer cp_name . serverNameFromInstance
 
-        addServer :: ProcessName -> ServerName -> MS.State ServersUsage ()
-        addServer procN serverN = MS.modify $ M.insertWith (++) serverN [procN]
+        addServer :: ProcessName -> ServerName -> MS.State (M.Map ServerName (S.Set ProcessName)) ()
+        addServer procN serverN = MS.modify $ M.insertWith S.union serverN (S.singleton procN)
 
         serverNameFromInstance :: ServerInstanceName -> ServerName
         serverNameFromInstance name =
