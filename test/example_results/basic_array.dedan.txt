@@ -976,7 +976,7 @@ actions {
   {A_foo.buf.put_2, buf.count_3_data_2_2_2_2} -> {A_foo.S_foo.ok, buf.count_4_data_2_2_2_2},
 };
 
-server: S_foo (servers ; agents A_foo),
+server: S_foo (servers buf: buf; agents A_foo),
 services {ok},
 states {s0_buf_put},
 actions {
@@ -985,10 +985,11 @@ actions {
 
 agents A_foo;
 
-servers S_foo;
+servers S_foo, buf: buf;
 
 init -> {
-  S_foo(A_foo).s0_buf_put,
+  buf(S_foo,A_foo).,
+  S_foo(buf,A_foo).s0_buf_put,
   A_foo.buf.put,
 }.
 

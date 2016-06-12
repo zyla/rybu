@@ -11,6 +11,8 @@ server buf {
     }
 }
 
+var buf = buf() { };
+
 process foo() {
     loop buf.put(1);
 }

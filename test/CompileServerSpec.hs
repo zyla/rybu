@@ -114,13 +114,13 @@ for = flip map
 
 compileServer' source =
     let server = unsafeParse Parser.server source
-    in case compileServer M.empty server of
+    in case compileServer M.empty M.empty server of
         Right server -> server
         Left err -> error $ "compileServer error: " ++ show err
 
 shouldFail source err =
     let server = unsafeParse Parser.server source
-    in assertEqual source (Left err) $ left stripContext $ compileServer M.empty server
+    in assertEqual source (Left err) $ left stripContext $ compileServer M.empty M.empty server
 
 stripContext :: Err -> Err
 stripContext (Context _ e) = stripContext e
