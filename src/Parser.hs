@@ -146,4 +146,4 @@ message = Message
     <*> (reservedOp "." *> identifier)
     <*> parens (expr `sepBy` comma)
 
-parseModel = parse (model <* whiteSpace <* eof)
+parseModel = parse (whiteSpace *> model <* eof)
