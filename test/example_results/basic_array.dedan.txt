@@ -988,7 +988,7 @@ agents A_foo;
 servers S_foo, buf: buf;
 
 init -> {
-  buf(S_foo,A_foo).,
+  buf(S_foo,A_foo).count_0_data_0_0_0_0,
   S_foo(buf,A_foo).s0_buf_put,
   A_foo.buf.put_1,
 }.
