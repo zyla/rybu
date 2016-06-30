@@ -990,6 +990,6 @@ servers S_foo, buf: buf;
 init -> {
   buf(S_foo,A_foo).,
   S_foo(buf,A_foo).s0_buf_put,
-  A_foo.buf.put,
+  A_foo.buf.put_1,
 }.
 

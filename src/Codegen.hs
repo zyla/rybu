@@ -87,7 +87,9 @@ generateDedan Model{..} = execWriterT $ do
         tell $ intercalate "," (map si_name model_serverInstances ++ [procAgentName cp_name])
         tells [").", cp_initialState, ",\n"]
 
-        tells ["  ", procAgentName cp_name, ".", message_server cp_initialMessage, ".", message_msg cp_initialMessage, ",\n"]
+        params <- lift $ mapM (evalExpr globalEnv) (message_params cp_initialMessage)
+        let encodedMsg = encodeMessage (message_msg cp_initialMessage) params
+        tells ["  ", procAgentName cp_name, ".", message_server cp_initialMessage, ".", encodedMsg, ",\n"]
 
     tellLn "}."
 
