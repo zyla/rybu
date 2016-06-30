@@ -59,6 +59,14 @@ spec = describe "compileServer" $ do
             }
         |] (TypeMismatch "0..3" "4")
 
+    it "should detect out-of-bounds array updates" $ do
+        shouldFail [r|
+            server test {
+                var a : {unit}[3];
+                {go} -> {a[3] = :unit}
+            }
+        |] (IndexOutOfBounds 3 3)
+
     it "should handle parameterized messages" $ do
         let CompiledServer{..} = compileServer' [r|
             server counter {

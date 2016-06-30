@@ -66,7 +66,7 @@ compileServer env serversUsage server@Server{..} =
 
                                     let updateArray indexE old f = do
                                             arr <- requireArray old
-                                            index <- evalExpr env indexE >>= requireInt
+                                            index <- evalExpr env indexE >>= requireValidIndex (length arr)
                                             newVal <- f (arr !! index)
                                             pure (Arr $ listSet index newVal arr)
 
