@@ -64,6 +64,7 @@ spec = describe "generateDedan" $ context "should show context in errors" $ do
     it "in initializers" $ do
 
         testErrorMessageContains [r|
+            server sem { var state : {up, down} }
             var mutex = sem() { state = bleh };
         |] ["initializer of server instance \"mutex\"",
             "Undefined symbol \"bleh\""]

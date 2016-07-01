@@ -17,6 +17,7 @@ data CompiledServer = CompiledServer
     , cs_services :: [Symbol]
     , cs_actions :: [ServerAction]
     , cs_usedBy :: [ProcessName]
+    , cs_vars :: [(Symbol, Type)]
     } deriving (Eq, Show)
 
 data ServerAction = ServerAction
@@ -91,6 +92,7 @@ compileServer env serversUsage server@Server{..} =
                             }
 
     actions <- concat <$> mapM compileTransition server_transitions
+    compiled_vars <- sequence $ map (\(s, _) -> lookupType s typeEnv >>= \t -> return (s, t)) server_vars
 
     pure CompiledServer
         { cs_name = server_name
@@ -98,6 +100,7 @@ compileServer env serversUsage server@Server{..} =
         , cs_services = nub (map sa_inMessage actions)
         , cs_actions = actions
         , cs_usedBy = getUsedBy serversUsage server_name
+        , cs_vars = compiled_vars
         }
     where
        getUsedBy serversUsage server_name = maybe [] id $ M.lookup server_name serversUsage

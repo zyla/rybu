@@ -25,6 +25,7 @@ generateDedan Model{..} = execWriterT $ do
     compiledProcs <- lift $ mapM (compileProcess globalEnv) model_procs
     let serversUsage = serversUsageFromProcs model_serverInstances compiledProcs
     compiledServers <- lift $ mapM (compileServer globalEnv serversUsage) model_servers
+    lift $ checkInstancesInitialization compiledServers model_serverInstances
 
     forM_ compiledServers $ \server@CompiledServer{..} -> do
         serverHeader cs_name
@@ -140,3 +141,37 @@ serversUsageFromProcs instances procs = M.map S.toList $ MS.execState (forM_ pro
         findServerInstance (i:is) name = if (si_name i) == name
                                             then Just i
                                             else findServerInstance is name
+
+checkInstancesInitialization :: [CompiledServer] -> [ServerInstance] -> EM ()
+checkInstancesInitialization servers instances = forM_ instances $ checkInstance servers
+    where
+        checkInstance :: [CompiledServer] -> ServerInstance -> EM ()
+        checkInstance servers ServerInstance{..} =
+            withContext ("in initializer of server instance " ++ show si_name) $ do
+                CompiledServer{..} <- lookupServer si_serverType servers
+                checkVars cs_vars si_initialState
+
+        lookupServer :: ServerName -> [CompiledServer] -> EM CompiledServer
+        lookupServer name [] = err (UndefinedSymbol name)
+        lookupServer name (cs:css) = if cs_name cs == name
+                                    then pure cs
+                                    else lookupServer name css
+
+        checkVars :: [(Symbol, Type)] -> [(Symbol, Expr)] -> EM ()
+        checkVars variables initializers =
+            let vars = S.fromList $ map fst variables
+                inits = S.fromList $ map fst initializers
+                inits_vars = S.difference inits vars
+                vars_inits = S.difference vars inits
+            in withContext "in variable initializers" $
+                if inits_vars /= S.empty
+                then err (UndefinedSymbol $ head $ S.toList inits_vars)
+                else if vars_inits /= S.empty
+                    then err (UninitializedVariable $ head $ S.toList vars_inits)
+                    else pure () -- check ok
+
+        -- czy jest takie variable
+        -- czy typ == typeof expr
+
+
+        --err (UninitializedVariable var)

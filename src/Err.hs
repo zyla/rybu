@@ -9,6 +9,7 @@ data Err =
     | ArraySizeNegative Int
     | IndexOutOfBounds Int Int -- ^ index, size
     | ErrCycle
+    | UninitializedVariable String
     | Context String Err
       deriving (Eq, Show)
 
@@ -26,4 +27,5 @@ ppError (TypeMismatch type_ val) = "Type mismatch: value " ++ val ++ " not in ty
 ppError (ArraySizeNegative size) = "Bad array size: " ++ show size
 ppError (IndexOutOfBounds index size) = "Index " ++ show index ++ " out of array bounds (array size = " ++ show size ++ ")"
 ppError (ErrCycle) = "Cycle detected in CFG"
+ppError (UninitializedVariable var) = "Uninitialized variable " ++ show var
 ppError (Context context err) = ppError err ++ "\n  " ++ context
