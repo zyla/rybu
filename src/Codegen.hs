@@ -25,7 +25,7 @@ generateDedan Model{..} = execWriterT $ do
     compiledProcs <- lift $ mapM (compileProcess globalEnv) model_procs
     let serversUsage = serversUsageFromProcs model_serverInstances compiledProcs
     compiledServers <- lift $ mapM (compileServer globalEnv serversUsage) model_servers
-    lift $ checkInstancesInitialization compiledServers model_serverInstances
+    lift $ checkInstancesInitialization globalEnv compiledServers model_serverInstances
 
     forM_ compiledServers $ \server@CompiledServer{..} -> do
         serverHeader cs_name
@@ -142,14 +142,16 @@ serversUsageFromProcs instances procs = M.map S.toList $ MS.execState (forM_ pro
                                             then Just i
                                             else findServerInstance is name
 
-checkInstancesInitialization :: [CompiledServer] -> [ServerInstance] -> EM ()
-checkInstancesInitialization servers instances = forM_ instances $ checkInstance servers
+checkInstancesInitialization :: Env -> [CompiledServer] -> [ServerInstance] -> EM ()
+checkInstancesInitialization env servers instances = forM_ instances $ checkInstance env servers
     where
-        checkInstance :: [CompiledServer] -> ServerInstance -> EM ()
-        checkInstance servers ServerInstance{..} =
+        checkInstance :: Env -> [CompiledServer] -> ServerInstance -> EM ()
+        checkInstance env servers ServerInstance{..} =
             withContext ("in initializer of server instance " ++ show si_name) $ do
                 CompiledServer{..} <- lookupServer si_serverType servers
-                checkVars cs_vars si_initialState
+                withContext "in variable initializers" $ do
+                    checkVars cs_vars si_initialState
+                    checkTypes env cs_vars si_initialState
 
         lookupServer :: ServerName -> [CompiledServer] -> EM CompiledServer
         lookupServer name [] = err (UndefinedSymbol name)
@@ -163,15 +165,24 @@ checkInstancesInitialization servers instances = forM_ instances $ checkInstance
                 inits = S.fromList $ map fst initializers
                 inits_vars = S.difference inits vars
                 vars_inits = S.difference vars inits
-            in withContext "in variable initializers" $
-                if inits_vars /= S.empty
-                then err (UndefinedSymbol $ head $ S.toList inits_vars)
+            in if inits_vars /= S.empty
+                then err $ UndefinedSymbol $ head $ S.toList inits_vars
                 else if vars_inits /= S.empty
-                    then err (UninitializedVariable $ head $ S.toList vars_inits)
+                    then err $ UninitializedVariable $ head $ S.toList vars_inits
                     else pure () -- check ok
 
-        -- czy jest takie variable
-        -- czy typ == typeof expr
+        checkTypes :: Env -> [(Symbol, Type)] -> [(Symbol, Expr)] -> EM ()
+        checkTypes env variables initializers =
+            let vars = M.fromList variables
+                inits = M.fromList initializers
+            in void $ M.traverseWithKey (checkVarType env inits) vars
 
+        checkVarType :: Env -> M.Map Symbol Expr -> Symbol -> Type -> EM ()
+        checkVarType env inits s t =
+            withContext ("in intilializer for variable " ++ show s) $ do
+                let expr = inits M.! s
+                value <- evalExpr env expr
+                if inRange t value
+                    then pure ()
+                    else err $ TypeMismatch (show t) (show value)
 
-        --err (UninitializedVariable var)

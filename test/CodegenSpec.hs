@@ -36,14 +36,14 @@ spec = do
                     var t = test() { a = 0, b = 0 };
                 |] (UndefinedSymbol "b")
 
---          it "detects type mismatch" $
---              shouldFail [r|
---                  server test {
---                      var a : 0..1;
---                      var b : { zero, one };
---                  }
---                  var t = test() { a = :zero, b = 1 };
---              |] (TypeMismatch "xd" "xd")
+            it "detects type mismatch" $ do
+                shouldFail [r|
+                    server test {
+                        var a : 0..1;
+                        var b : { zero, one };
+                    }
+                    var t = test() { a = :zero, b = 1 };
+                |] (TypeMismatch "Range 0 1" "Sym \"zero\"")
 
 shouldFail source err =
     let model = unsafeParse Parser.model source

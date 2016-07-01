@@ -30,7 +30,7 @@ evalPredicate env = eval
     evalCmpOp GreaterThanEqual (Int v1) (Int v2) = pure (v1 >= v2)
     evalCmpOp _                 _        _  = err OpTypeMismatch
     
-
+evalExpr :: Env -> Expr -> EM Value
 evalExpr env (Var var) = lookupVal env var
 
 evalExpr env (LitInt val) = pure (Int val)
