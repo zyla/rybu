@@ -4,7 +4,7 @@ import Control.Monad.Writer
 import qualified Control.Monad.State as MS
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Data.List (intercalate, nub)
+import Data.List (intercalate, nub, sortBy)
 
 import AST
 import Err
@@ -26,6 +26,7 @@ generateDedan Model{..} = execWriterT $ do
     let serversUsage = serversUsageFromProcs model_serverInstances compiledProcs
     compiledServers <- lift $ mapM (compileServer globalEnv serversUsage) model_servers
     lift $ checkInstancesInitialization globalEnv compiledServers model_serverInstances
+    let serverInstances = sortInstancesInitializers model_serverInstances
 
     forM_ compiledServers $ \server@CompiledServer{..} -> do
         serverHeader cs_name
@@ -52,7 +53,7 @@ generateDedan Model{..} = execWriterT $ do
             server = procServerName cp_name
 
         serverHeader server
-            (map siFormalParam model_serverInstances)
+            (map siFormalParam serverInstances)
             [agent]
             cp_services
             cp_states
@@ -71,11 +72,11 @@ generateDedan Model{..} = execWriterT $ do
     tellLn ";\n"
 
     tell "servers "
-    tell $ intercalate ", " (map procServerName procNames ++ map siFormalParam model_serverInstances)
+    tell $ intercalate ", " (map procServerName procNames ++ map siFormalParam serverInstances)
     tellLn ";\n"
 
     tellLn "init -> {"
-    forM_ model_serverInstances $ \(ServerInstance name _ initEnvExpr) -> do
+    forM_ serverInstances $ \(ServerInstance name _ initEnvExpr) -> do
         tells ["  ", name, "("]
         tell $ intercalate "," (map procServerName procNames ++ map procAgentName procNames)
         initEnv <- lift $ withContext ("in initializer of server instance " ++ show name) $
@@ -85,7 +86,7 @@ generateDedan Model{..} = execWriterT $ do
 
     forM_ compiledProcs $ \CompiledProc{..} -> do
         tells ["  ", procServerName cp_name, "("]
-        tell $ intercalate "," (map si_name model_serverInstances ++ [procAgentName cp_name])
+        tell $ intercalate "," (map si_name serverInstances ++ [procAgentName cp_name])
         tells [").", cp_initialState, ",\n"]
 
         params <- lift $ mapM (evalExpr globalEnv) (message_params cp_initialMessage)
@@ -186,3 +187,8 @@ checkInstancesInitialization env servers instances = forM_ instances $ checkInst
                     then pure ()
                     else err $ TypeMismatch (show t) (show value)
 
+sortInstancesInitializers :: [ServerInstance] -> [ServerInstance]
+sortInstancesInitializers instances = sortInstanceInits <$> instances
+    where
+        sortInstanceInits :: ServerInstance -> ServerInstance
+        sortInstanceInits si@(ServerInstance _ _ initialState) = si { si_initialState = sortBy (\(a, _) (b, _) -> compare a b) initialState }
