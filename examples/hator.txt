@@ -1,3 +1,5 @@
+const BUFFER_SIZE = 4;
+
 server semaphore {
   var state : {up, down};
 
@@ -6,20 +8,20 @@ server semaphore {
 }
 
 server semaphoreM {
-    var state : 0..4;
+    var state : 0..BUFFER_SIZE;
     { p | state > 0 } -> { state = state - 1; return :ok; }
-    { v | state < 4 } -> { state = state + 1; return :ok; }
-    { v | state == 4 } -> { return :ok; }
+    { v | state < BUFFER_SIZE } -> { state = state + 1; return :ok; }
+    { v | state == BUFFER_SIZE } -> { return :ok; }
 }
 
 server buffer {
-  var data : (0..1)[4];
-  var count : 0..4;
+  var data : (0..1)[BUFFER_SIZE];
+  var count : 0..BUFFER_SIZE;
 
---  { put | count == 4 } -> {ASSERTION_FAILED}
-  { put | sum(data) < 4 && count < 4 } ->
+--  { put | count == BUFFER_SIZE } -> {ASSERTION_FAILED}
+  { put | sum(data) < BUFFER_SIZE && count < BUFFER_SIZE } ->
     { data[count] = 0; count = count + 1; return :ok; }
-  { put | sum(data) < 4 && count < 4 } ->
+  { put | sum(data) < BUFFER_SIZE && count < BUFFER_SIZE } ->
     { data[count] = 1; count = count + 1; return :ok; }
 
 --  {get | count < 2} -> {ASSERTION_FAILED}
@@ -32,8 +34,8 @@ server buffer {
   { pAcondition | sum(data) > 2 } -> { return :false; }
   { pAcondition | sum(data) <= 2 } -> { return :true; }
 
-  { canWrite | count < 4 } -> { return :true; }
-  { canWrite | count == 4 } -> { return :false; }
+  { canWrite | count < BUFFER_SIZE } -> { return :true; }
+  { canWrite | count == BUFFER_SIZE } -> { return :false; }
 }
 
 server bool {
@@ -46,7 +48,7 @@ server bool {
     { get | val == :false } -> { false }
 }
 
-var buffer = buffer() { count = 0, data = [4; 0] };
+var buffer = buffer() { count = 0, data = [BUFFER_SIZE; 0] };
 var s = semaphore() { state = :up };
 var cs = semaphoreM() { state = 0 };
 var pAs = semaphore() { state = :down };
