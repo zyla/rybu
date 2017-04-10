@@ -17,9 +17,10 @@ server buffer {
   var count : 0..4;
 
 --  { put | count == 4 } -> {ASSERTION_FAILED}
-
-  { put | sum(data) < 4 && count < 4 } for (elem : 0..1) ->
-    { data[count] = elem; count = count + 1; return :ok; }
+  { put | sum(data) < 4 && count < 4 } ->
+    { data[count] = 0; count = count + 1; return :ok; }
+  { put | sum(data) < 4 && count < 4 } ->
+    { data[count] = 1; count = count + 1; return :ok; }
 
 --  {get | count < 2} -> {ASSERTION_FAILED}
   { get | sum(data) >= data[0] && count >= 2 } ->
