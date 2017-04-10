@@ -118,6 +118,20 @@ spec = describe "compileServer" $ do
             }
         |]
 
+    it "should handle new action syntax" $ do
+        shouldCompile [r|
+            server buf {
+                var data : (0..2)[5];
+                var count : 0..5;
+
+                { put(elem : 0..2) | count < 5 } -> {
+                    data[count] = elem;
+                    count = count + 1;
+                    return :ok;
+                }
+            }
+        |]
+
 for = flip map
 
 compileServer' source =

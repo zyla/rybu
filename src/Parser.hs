@@ -11,7 +11,7 @@ import Text.Parsec.Expr (buildExpressionParser, Assoc(..), Operator(..))
 import AST
 
 T.TokenParser {..} = T.makeTokenParser L.haskellDef
-    { T.reservedNames = [ "server", "process", "var", "loop", "match" ] }
+    { T.reservedNames = [ "server", "process", "var", "loop", "match", "return" ] }
 
 semicolon = reservedOp ";"
 
@@ -46,9 +46,15 @@ transition = do
     ndParams <- option [] $ reserved "for" *> parens (formalParam `sepBy` comma)
     reservedOp "->"
     (maybeOutSignal, assignments) <- try (braces retvalOnly) <|>
-        (braces $ do
+        try (braces $ do
             maybeOutSignal <- optionMaybe (try $ identifier <* semicolon)
-            (,) maybeOutSignal <$> (assign `sepBy` comma))
+            assignments <- assign `sepBy` comma
+            pure (maybeOutSignal, assignments)
+        ) <|> try (braces $ do
+          assignments <- many (assign <* semicolon)
+          maybeOutSignal <- optionMaybe (reserved "return" *> atom <* semicolon)
+          pure (maybeOutSignal, assignments)
+        )
 
     return $ Transition message pred ndParams maybeOutSignal assignments
   where
@@ -95,11 +101,13 @@ table =
 term =
       Var <$> identifier
   <|> LitInt <$> natural
-  <|> LitSym <$> (reservedOp ":" *> identifier)
+  <|> LitSym <$> atom
   <|> brackets (
         LitArrFill <$> try (expr <* semicolon) <*> expr
     <|> LitArr <$> (expr `sepBy` comma))
   <|> parens expr
+
+atom = reservedOp ":" *> identifier
 
 arrayIndexOrSlice = brackets $ do
     index1 <- expr
