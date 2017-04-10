@@ -45,7 +45,8 @@ server buffer {
 server bool {
     var val : {true, false};
 
-    { set(new_val : {true, false}) } -> { val = new_val }
+    { set_true } -> { val = :true; return :ok; }
+    { set_false } -> { val = :false; return :ok; }
 
     { get | val = :true } -> { true }
     { get | val = :false } -> { false }
@@ -85,10 +86,10 @@ process producerB() {
         s.p();
         match buffer.canWrite() {
             :false => {
-                pBwaiting.set(:true);
+                pBwaiting.set_true();
                 s.v();
                 pBs.p();
-                pBwaiting.set(:false);
+                pBwaiting.set_false();
             }
             :true => skip;
         }
