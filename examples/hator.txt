@@ -103,17 +103,17 @@ thread producerA() {
     s.p();
     match buffer.canWrite() {
       :false => {
-        pAwaiting.set(:true);
+        pAwaiting.set_true();
         s.v();
         pAs.p();
-        pAwaiting.set(:false);
+        pAwaiting.set_false();
       }
       :true => match buffer.pAcondition() {
         :false => {
-          pAwaiting.set(:true);
+          pAwaiting.set_true();
           s.v();
           pAs.p();
-          pAwaiting.set(:false);
+          pAwaiting.set_false();
         }
         :true => skip;
       }
