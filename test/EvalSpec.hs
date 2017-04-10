@@ -61,6 +61,7 @@ spec = do
 
         it "array literals" $ do
             test "[1, 3, 5]" $ Right (iarray [1, 3, 5])
+            test "[:atom, :atom]" $ Right (Arr [Sym "atom", Sym "atom"])
             test "[size; 0]" $ Right (iarray [0, 0, 0, 0, 0])
             test "[size-10; 0]" $ Left (ArraySizeNegative (-5))
 
