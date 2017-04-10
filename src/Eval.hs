@@ -103,7 +103,7 @@ requireArray (Arr v) = pure v
 requireArray v = err $ TypeMismatch "Array" (ppValue v)
 
 ppValue :: Value -> String
-ppValue (Sym s) = s
+ppValue (Sym s) = ":" ++ s
 ppValue (Int i) = show i
 ppValue (Arr xs) = "[" ++ intercalate ", " (map ppValue xs) ++ "]"
 

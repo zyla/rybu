@@ -37,7 +37,7 @@ spec = describe "generateDedan" $ context "should show context in errors" $ do
                 var value : {up, down};
                 { v | value = foo } -> { ok }
             }
-        |] ["server sem", "action v", "predicate", "state { value = up }", "foo"]
+        |] ["server sem", "action v", "predicate", "state { value = :up }", "foo"]
 
         testErrorMessageContains [r|
             server sem {
@@ -46,7 +46,7 @@ spec = describe "generateDedan" $ context "should show context in errors" $ do
             }
         |] ["server sem", "action v",
             "updates",
-            "state { value = up }",
+            "state { value = :up }",
             "assignment of variable \"value\"",
             "value 7 not in type {up, down}"]
 
@@ -58,7 +58,7 @@ spec = describe "generateDedan" $ context "should show context in errors" $ do
         |] ["server sem",
             "action v",
             "updates",
-            "state { value = up }",
+            "state { value = :up }",
             "Undefined symbol \"bleh\""]
 
     it "in initializers" $ do

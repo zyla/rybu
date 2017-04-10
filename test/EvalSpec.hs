@@ -86,7 +86,7 @@ spec = do
             test "sum([])" $ Right (Int 0)
             test "sum([1])" $ Right (Int 1)
             test "sum([1, 2])" $ Right (Int 3)
-            test "sum([1, :atom])" $ Left (TypeMismatch "Int" "atom")
+            test "sum([1, :atom])" $ Left (TypeMismatch "Int" ":atom")
             test "sum(5)" $ Left (TypeMismatch "Array" "5")
 
 
@@ -112,12 +112,12 @@ spec = do
         it "basic types" $ do
             test "{up, down}" $ Right (Enum ["up", "down"])
             test "1..15" $ Right (Range 1 15)
-            test "up..15" $ Left (TypeMismatch "Int" "up")
-            test "1..up" $ Left (TypeMismatch "Int" "up")
+            test "up..15" $ Left (TypeMismatch "Int" ":up")
+            test "1..up" $ Left (TypeMismatch "Int" ":up")
 
         it "arrays" $ do
             test "{up, down}[3]" $ Right (Array (Enum ["up", "down"]) 3)
             test "(1..10)[3]" $ Right (Array (Range 1 10) 3)
-            test "(1..10)[up]" $ Left (TypeMismatch "Int" "up")
+            test "(1..10)[up]" $ Left (TypeMismatch "Int" ":up")
 
 iarray = Arr . map Int
