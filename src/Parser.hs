@@ -3,6 +3,7 @@ module Parser (
   , Text.Parsec.parse
 ) where
 
+import Control.Monad
 import Text.Parsec
 import qualified Text.Parsec.Language as L
 import qualified Text.Parsec.Token as T
@@ -99,13 +100,20 @@ table =
     ]
 
 term =
-      Var <$> identifier
+      identifierTerm
   <|> LitInt <$> natural
   <|> LitSym <$> atom
   <|> brackets (
         LitArrFill <$> try (expr <* semicolon) <*> expr
     <|> LitArr <$> (expr `sepBy` comma))
   <|> parens expr
+
+identifierTerm = do
+  id <- identifier
+  (do guard (id == "sum")
+      expr <- parens expr
+      pure (ArraySum expr)
+   ) <|> pure (Var id)
 
 atom = reservedOp ":" *> identifier
 

@@ -63,6 +63,11 @@ evalExpr env (ArraySlice arrayE index1E index2E) = do
 
     return $ Arr $ take (index2 - index1 + 1) $ drop index1 array
 
+evalExpr env (ArraySum arrayE) = do
+    array <- requireArray =<< evalExpr env arrayE
+    values <- mapM requireInt array
+    pure $ Int $ sum values
+
 evalExpr env (BinOp e1 op e2) = join $ evalBinOp op <$> evalExpr env e1 <*> evalExpr env e2
   where
     evalBinOp Plus (Int i1) (Int i2) = pure $ Int (i1 + i2)

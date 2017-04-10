@@ -67,6 +67,7 @@ data Expr =
     | ArrayIndex Expr Expr -- arr[3]
     | ArraySlice Expr Expr Expr -- arr[1..3]
     | BinOp Expr BinOp Expr -- 2 + 3
+    | ArraySum Expr -- sum(arr)
       deriving (Show)
 
 data BinOp = Plus | Minus | Modulo deriving (Show)

@@ -82,6 +82,13 @@ spec = do
             test "arr[0] + arr[1]" $ Right (Int 4)
             test "(arr[1..4] + [ arr[ arr[0] ] ])" $ Right (iarray [3, 5, 7, 9, 3])
 
+        it "sum(array)" $ do
+            test "sum([])" $ Right (Int 0)
+            test "sum([1])" $ Right (Int 1)
+            test "sum([1, 2])" $ Right (Int 3)
+            test "sum([1, :atom])" $ Left (TypeMismatch "Int" "atom")
+            test "sum(5)" $ Left (TypeMismatch "Array" "5")
+
 
     describe "predicates" $ do
         let env = M.empty
