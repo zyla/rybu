@@ -4,6 +4,7 @@ module TestImport (
 ) where
 
 import Control.Monad as X
+import Data.Either as X
 
 import Test.Hspec as X
 import Test.HUnit as X

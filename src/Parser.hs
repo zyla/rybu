@@ -11,7 +11,7 @@ import Text.Parsec.Expr (buildExpressionParser, Assoc(..), Operator(..))
 import AST
 
 T.TokenParser {..} = T.makeTokenParser L.haskellDef
-    { T.reservedNames = [ "server", "process", "var", "loop", "match", "return" ] }
+    { T.reservedNames = [ "server", "process", "thread", "var", "loop", "match", "return" ] }
 
 semicolon = reservedOp ";"
 
@@ -136,8 +136,10 @@ initialState = braces (((,) <$> identifier <*> (reservedOp "=" *> expr)) `sepBy`
 
 process =
   Process
-    <$> (reserved "process" *> identifier <* parens (pure ()))
+    <$> (threadKeyword *> identifier <* parens (pure ()))
     <*> statement
+
+threadKeyword = reserved "process" <|> reserved "thread"
 
 statement =
       Block <$> braces (many statement)

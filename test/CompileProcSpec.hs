@@ -11,7 +11,8 @@ import AST
 import Text.RawString.QQ (r)
 
 spec :: Spec
-spec = describe "compileProc" $ do
+spec = do
+  describe "compileProc" $ do
     it "should handle parameterized messages" $ do
         let CompiledProc{..} = compileProc' [r|
             process test() {
@@ -27,6 +28,12 @@ spec = describe "compileProc" $ do
         assertEqual ""
             [(stateName, "ok", "counter", encodedMsg, stateName)]
             cp_transitions
+
+  describe "process parser" $ do
+    it "should support the 'thread' keyword" $ do
+      Parser.parse Parser.process "" "thread foo() { skip; }"
+        `shouldSatisfy` isRight
+
 
 compileProc' source =
     let process = unsafeParse Parser.process source
