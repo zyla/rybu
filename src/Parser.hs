@@ -70,7 +70,8 @@ assign = (,) <$> lhs <*> (reservedOp "=" *> expr)
 lhs = LHS <$> identifier <*> many (brackets expr)
 
 cmpOp =
-      pure Equal <* reservedOp "="
+      pure Equal <* reservedOp "=="
+  <|> pure Equal <* reservedOp "="
   <|> pure NotEqual <* reservedOp "!="
   <|> pure LessThan <* reservedOp "<"
   <|> pure GreaterThan <* reservedOp ">"

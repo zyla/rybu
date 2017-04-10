@@ -6,7 +6,7 @@ import qualified Data.Map as M
 
 import AST
 import qualified Parser
-import Eval (inRange, evalExpr, evalType)
+import Eval (inRange, evalExpr, evalType, evalPredicate)
 import Err
 
 spec :: Spec
@@ -81,6 +81,19 @@ spec = do
         it "misc" $ do
             test "arr[0] + arr[1]" $ Right (Int 4)
             test "(arr[1..4] + [ arr[ arr[0] ] ])" $ Right (iarray [3, 5, 7, 9, 3])
+
+
+    describe "predicates" $ do
+        let env = M.empty
+            test str expected =
+              testF "evalPredicate" (evalPredicate env)
+                (unsafeParse Parser.predicate str)
+                expected
+
+        it "supports both syntaxes for equality" $ do
+            test "1 = 1" $ Right True
+            test "1 == 1" $ Right True
+
 
     describe "evalType" $ do
         let env = M.fromList [ ("up", Sym "up"), ("size", Int 5) ]
