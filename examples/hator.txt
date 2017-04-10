@@ -8,23 +8,21 @@ server semaphore {
 }
 
 server semaphoreM {
-    var state : 0..BUFFER_SIZE;
-    { p | state > 0 } -> { state = state - 1; return :ok; }
-    { v | state < BUFFER_SIZE } -> { state = state + 1; return :ok; }
-    { v | state == BUFFER_SIZE } -> { return :ok; }
+  var state : 0..BUFFER_SIZE;
+  { p | state > 0 } -> { state = state - 1; return :ok; }
+  { v | state < BUFFER_SIZE } -> { state = state + 1; return :ok; }
+  { v | state == BUFFER_SIZE } -> { return :ok; }
 }
 
 server buffer {
   var data : (0..1)[BUFFER_SIZE];
   var count : 0..BUFFER_SIZE;
 
---  { put | count == BUFFER_SIZE } -> {ASSERTION_FAILED}
   { put | sum(data) < BUFFER_SIZE && count < BUFFER_SIZE } ->
     { data[count] = 0; count = count + 1; return :ok; }
   { put | sum(data) < BUFFER_SIZE && count < BUFFER_SIZE } ->
     { data[count] = 1; count = count + 1; return :ok; }
 
---  {get | count < 2} -> {ASSERTION_FAILED}
   { get | sum(data) >= data[0] && count >= 2 } ->
     { count = count - 1; data = data[1..3] + [0]; return :ok; }
 
@@ -39,13 +37,13 @@ server buffer {
 }
 
 server bool {
-    var val : {true, false};
+  var val : {true, false};
 
-    { set_true } -> { val = :true; return :ok; }
-    { set_false } -> { val = :false; return :ok; }
+  { set_true } -> { val = :true; return :ok; }
+  { set_false } -> { val = :false; return :ok; }
 
-    { get | val == :true } -> { true }
-    { get | val == :false } -> { false }
+  { get | val == :true } -> { return :true; }
+  { get | val == :false } -> { return :false; }
 }
 
 var buffer = buffer() { count = 0, data = [BUFFER_SIZE; 0] };
