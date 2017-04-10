@@ -18,9 +18,9 @@ server buffer {
   var data : (0..1)[BUFFER_SIZE];
   var count : 0..BUFFER_SIZE;
 
-  { put | sum(data) < BUFFER_SIZE && count < BUFFER_SIZE } ->
+  { put | count < BUFFER_SIZE } ->
     { data[count] = 0; count = count + 1; return :ok; }
-  { put | sum(data) < BUFFER_SIZE && count < BUFFER_SIZE } ->
+  { put | count < BUFFER_SIZE } ->
     { data[count] = 1; count = count + 1; return :ok; }
 
   { get | sum(data) >= data[0] && count >= 2 } ->
