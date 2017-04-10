@@ -10,6 +10,7 @@ import qualified Data.Map as M
 import AST
 import Err
 import Eval
+import Debug.Trace
 
 data CompiledServer = CompiledServer
     { cs_name :: ServerName
@@ -29,8 +30,10 @@ data ServerAction = ServerAction
 
 type ServersUsage = M.Map ServerName [ProcessName]
 
-compileServer :: Env -> ServersUsage -> Server -> EM CompiledServer
-compileServer env serversUsage server@Server{..} =
+type ServerState = [(Symbol, Value)]
+
+compileServer :: Env -> ServersUsage -> Server -> [ServerState] -> EM CompiledServer
+compileServer env serversUsage server@Server{..} initialStates =
   withContext ("in server " ++ server_name) $ do
     typeEnv <- fmap M.fromList $ forM server_vars $ \(name, typeE) ->
         withContext ("in type of var " ++ name) $
@@ -94,16 +97,28 @@ compileServer env serversUsage server@Server{..} =
     actions <- concat <$> mapM compileTransition server_transitions
     compiled_vars <- sequence $ map (\(s, _) -> lookupType s typeEnv >>= \t -> return (s, t)) server_vars
 
+    let states = reachableStates (S.fromList $ map (encode . M.fromList) initialStates) actions
+    trace (show states) (return ())
+
     pure CompiledServer
         { cs_name = server_name
-        , cs_states = map encodeState (allStates $ M.toList typeEnv)
+        , cs_states = S.toList states
         , cs_services = nub (map sa_inMessage actions)
-        , cs_actions = actions
+        , cs_actions = filter (\action -> sa_inState action `S.member` states) actions
         , cs_usedBy = getUsedBy serversUsage server_name
         , cs_vars = compiled_vars
         }
     where
        getUsedBy serversUsage server_name = maybe [] id $ M.lookup server_name serversUsage
+
+reachableStates :: S.Set String -> [ServerAction] -> S.Set String
+reachableStates initial actions = go initial actions
+  where
+    go initial [] = initial
+    go initial (ServerAction{sa_inState=inState,sa_outState=outState}:xs)
+      | inState `S.member` initial, outState `S.notMember` initial
+         = go (S.insert outState initial) actions
+      | otherwise                  = go initial xs
 
 listSet :: Int -> a -> [a] -> [a]
 listSet 0 x (_:xs) = x:xs
@@ -117,7 +132,7 @@ typeValues (Array elemType size) = map Arr $ traverse typeValues (replicate (fro
 encodeState :: [(Symbol, Value)] -> Symbol
 encodeState = intercalate "_" . map (\(name, val) -> name ++ "_" ++ encodeValue val)
 
-allStates :: [(Symbol, Type)] -> [[(Symbol, Value)]]
+allStates :: [(Symbol, Type)] -> [ServerState]
 allStates vars =
     let names = map fst vars
         types = map snd vars

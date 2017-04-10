@@ -24,7 +24,15 @@ generateDedan Model{..} = execWriterT $ do
 
     compiledProcs <- lift $ mapM (compileProcess globalEnv) model_procs
     let serversUsage = serversUsageFromProcs model_serverInstances compiledProcs
-    compiledServers <- lift $ mapM (compileServer globalEnv serversUsage) model_servers
+        compileServer' server = do
+          let states =
+                   map si_initialState
+                 $ filter (\si -> si_serverType si == server_name server)
+                 $ model_serverInstances
+          initialStates <- (traverse . traverse . traverse) (evalExpr globalEnv) states
+          compileServer globalEnv serversUsage server initialStates
+
+    compiledServers <- lift $ mapM compileServer' model_servers
     lift $ checkInstancesInitialization globalEnv compiledServers model_serverInstances
     let serverInstances = sortInstancesInitializers model_serverInstances
 
