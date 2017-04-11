@@ -101,7 +101,7 @@ table =
 
 term =
       identifierTerm
-  <|> LitInt <$> natural
+  <|> LitInt <$> integer
   <|> LitSym <$> atom
   <|> brackets (
         LitArrFill <$> try (expr <* semicolon) <*> expr

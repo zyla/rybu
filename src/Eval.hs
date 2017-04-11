@@ -114,7 +114,9 @@ ppEnv env = "{" ++ intercalate "," (map ppVar $ M.toList env) ++ " }"
 
 encodeValue :: Value -> String
 encodeValue (Sym s) = s
-encodeValue (Int i) = show i
+encodeValue (Int i)
+  | i >= 0    = show i
+  | otherwise = "m" ++ show (-i)
 encodeValue (Arr xs) = intercalate "_" (map encodeValue xs)
 
 evalType :: Env -> TypeExpr -> EM Type

@@ -132,6 +132,18 @@ spec = describe "compileServer" $ do
             }
         |]
 
+    it "should handle negative integers" $ do
+        let CompiledServer{..} = compileServer' [r|
+            server counter {
+                var count : -1..0;
+                { decrement | count == 0 } -> { count = count - 1; return :ok; }
+            }
+        |]
+
+        let expected = [ServerAction "decrement" "count_0" "ok" "count_m1"]
+
+        assertEqual "" expected cs_actions
+
 for = flip map
 
 compileServer' source =

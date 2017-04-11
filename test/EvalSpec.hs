@@ -51,6 +51,7 @@ spec = do
 
         it "basic literals" $ do
             test "1" $ Right (Int 1)
+            test "-1" $ Right (Int (-1))
             test "up" $ Right (Sym "up")
             test ":true" $ Right (Sym "true")
 
@@ -67,13 +68,13 @@ spec = do
 
         it "array indexing" $ do
             test "arr[1]" $ Right (Int 3)
-            test "arr[0-1]" $ Left (IndexOutOfBounds (-1) 5)
+            test "arr[-1]" $ Left (IndexOutOfBounds (-1) 5)
             test "arr[size]" $ Left (IndexOutOfBounds 5 5)
             test "arr[size+1]" $ Left (IndexOutOfBounds 6 5)
 
         it "array slicing" $ do
             test "arr[1..3]" $ Right (iarray [3, 5, 7])
-            test "arr[0-1..1]" $ Left (IndexOutOfBounds (-1) 5)
+            test "arr[-1..1]" $ Left (IndexOutOfBounds (-1) 5)
             test "arr[0..size]" $ Left (IndexOutOfBounds 5 5)
 
         it "array concatenation" $ do
