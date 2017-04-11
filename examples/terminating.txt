@@ -1,0 +1,12 @@
+server sem {
+    var state : {up, down};
+
+    { p | state = :up } -> { state = :down }
+    { v } -> { state = :up }
+}
+
+var s = sem() { state = :up };
+
+process p1() {
+    s.v();
+}

@@ -10,6 +10,7 @@ data Err =
     | IndexOutOfBounds Int Int -- ^ index, size
     | ErrCycle
     | UninitializedVariable String
+    | EmptyProcess
     | Context String Err
       deriving (Eq, Show)
 
@@ -28,4 +29,5 @@ ppError (ArraySizeNegative size) = "Bad array size: " ++ show size
 ppError (IndexOutOfBounds index size) = "Index " ++ show index ++ " out of array bounds (array size = " ++ show size ++ ")"
 ppError (ErrCycle) = "Cycle detected in CFG"
 ppError (UninitializedVariable var) = "Uninitialized variable " ++ show var
+ppError (EmptyProcess) = "Empty process"
 ppError (Context context err) = ppError err ++ "\n  " ++ context

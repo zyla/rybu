@@ -1,0 +1,26 @@
+server: sem (servers S_p1; agents A_p1),
+services {p, v},
+states {state_up, state_down},
+actions {
+  {A_p1.sem.p, sem.state_up} -> {A_p1.S_p1.ok, sem.state_down},
+  {A_p1.sem.v, sem.state_up} -> {A_p1.S_p1.ok, sem.state_up},
+  {A_p1.sem.v, sem.state_down} -> {A_p1.S_p1.ok, sem.state_up},
+};
+
+server: S_p1 (servers s: sem; agents A_p1),
+services {ok},
+states {s0_s_v},
+actions {
+  {A_p1.S_p1.ok, S_p1.s0_s_v} -> {S_p1.s0_s_v},
+};
+
+agents A_p1;
+
+servers S_p1, s: sem;
+
+init -> {
+  s(S_p1,A_p1).state_up,
+  S_p1(s,A_p1).s0_s_v,
+  A_p1.s.v,
+}.
+
