@@ -29,7 +29,7 @@ evalPredicate env = eval
     evalCmpOp LessThanEqual  (Int v1) (Int v2) = pure (v1 <= v2)
     evalCmpOp GreaterThanEqual (Int v1) (Int v2) = pure (v1 >= v2)
     evalCmpOp _                 _        _  = err OpTypeMismatch
-
+    
 evalExpr :: Env -> Expr -> EM Value
 evalExpr env (Var var) = lookupVal env var
 
@@ -67,10 +67,6 @@ evalExpr env (ArraySum arrayE) = do
     array <- requireArray =<< evalExpr env arrayE
     values <- mapM requireInt array
     pure $ Int $ sum values
-
-evalExpr env (ArrayCount arrayE) = do
-    array <- requireArray =<< evalExpr env arrayE
-    pure $ Int $ fromIntegral $ length array
 
 evalExpr env (BinOp e1 op e2) = join $ evalBinOp op <$> evalExpr env e1 <*> evalExpr env e2
   where

@@ -110,16 +110,10 @@ term =
 
 identifierTerm = do
   id <- identifier
-  sum id <|> count id <|> pure (Var id)
-  where
-    sum id = do
-      guard (id == "sum")
+  (do guard (id == "sum")
       expr <- parens expr
       pure (ArraySum expr)
-    count id = do
-      guard (id == "count")
-      expr <- parens expr
-      pure (ArrayCount expr)
+   ) <|> pure (Var id)
 
 atom = reservedOp ":" *> identifier
 

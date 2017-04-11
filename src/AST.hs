@@ -43,9 +43,9 @@ data TypeExpr = EnumE [Symbol] | RangeE Expr Expr | ArrayE TypeExpr Expr derivin
 data Type = Enum [Symbol] | Range Integer Integer | Array Type Integer deriving (Eq, Show)
 
 data Predicate =
-      Cmp Expr CmpOp Expr
-    | And Predicate Predicate
-    | Or Predicate Predicate
+      Cmp Expr CmpOp Expr 
+    | And Predicate Predicate 
+    | Or Predicate Predicate 
     | BoolLit Bool
       deriving (Show)
 
@@ -68,7 +68,6 @@ data Expr =
     | ArraySlice Expr Expr Expr -- arr[1..3]
     | BinOp Expr BinOp Expr -- 2 + 3
     | ArraySum Expr -- sum(arr)
-    | ArrayCount Expr -- count(arr)
       deriving (Show)
 
 data BinOp = Plus | Minus | Modulo deriving (Show)

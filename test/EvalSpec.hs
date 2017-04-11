@@ -36,7 +36,7 @@ spec = do
             test (Array (Range 1 3) 3, iarray [1, 1]) False
             test (Array (Range 1 3) 3, Sym "foo") False
             test (Array (Range 1 3) 3, Int 1) False
-
+            
 
     describe "eval" $ do
         let env = M.fromList
@@ -90,12 +90,6 @@ spec = do
             test "sum([1, :atom])" $ Left (TypeMismatch "Int" ":atom")
             test "sum(5)" $ Left (TypeMismatch "Array" "5")
 
-        it "count(array)" $ do
-            test "count([])" $ Right (Int 0)
-            test "count([2])" $ Right (Int 1)
-            test "count([2, 3])" $ Right (Int 2)
-            test "count([1, :atom, 3])" $ Right (Int 3)
-            test "sum(5)" $ Left (TypeMismatch "Array" "5")
 
     describe "predicates" $ do
         let env = M.empty
