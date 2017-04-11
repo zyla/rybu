@@ -46,6 +46,13 @@ test-suite hspec-tests
   hs-source-dirs:      test
   main-is:             Spec.hs
 
+  other-modules:       CodegenSpec
+                       CompileProcSpec
+                       CompileServerSpec
+                       ErrorMessagesSpec
+                       EvalSpec
+                       TestImport
+
   build-depends:       base
                      , rybu
                      , hspec
