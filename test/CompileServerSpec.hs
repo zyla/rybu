@@ -144,6 +144,18 @@ spec = describe "compileServer" $ do
 
         assertEqual "" expected cs_actions
 
+    it "should accept `yield` statement" $ do
+        let CompiledServer{..} = compileServer' [r|
+            server counter {
+                var count : 0..1;
+                { decrement | count == 1 } -> { count = count - 1; return :ok; }
+                { decrement | count == 0 } -> { yield; }     -- Yield should compile to no IMDS action
+            }
+        |]
+
+        let expected = [ServerAction "decrement" "count_1" "ok" "count_0"]
+        assertEqual "" expected cs_actions
+
 for = flip map
 
 compileServer' source =

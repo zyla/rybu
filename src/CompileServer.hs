@@ -91,6 +91,8 @@ compileServer env serversUsage server@Server{..} =
                             , sa_outState = encode (M.union updates state)
                             }
 
+        compileTransition (Yield _ _) = pure []  -- NOTE(hator): Yield signal does not generate any IMDS action
+
     actions <- concat <$> mapM compileTransition server_transitions
     compiled_vars <- sequence $ map (\(s, _) -> lookupType s typeEnv >>= \t -> return (s, t)) server_vars
 

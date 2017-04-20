@@ -12,7 +12,7 @@ import Text.Parsec.Expr (buildExpressionParser, Assoc(..), Operator(..))
 import AST
 
 T.TokenParser {..} = T.makeTokenParser L.haskellDef
-    { T.reservedNames = [ "server", "process", "thread", "var", "loop", "match", "return" ] }
+    { T.reservedNames = [ "server", "process", "thread", "var", "loop", "match", "return", "yield" ] }
 
 semicolon = reservedOp ";"
 
@@ -46,20 +46,28 @@ transition = do
         (reservedOp "|" *> predicate <|> pure (BoolLit True))
     ndParams <- option [] $ reserved "for" *> parens (formalParam `sepBy` comma)
     reservedOp "->"
-    (maybeOutSignal, assignments) <- try (braces retvalOnly) <|>
-        try (braces $ do
+    (maybeOutSignal, assignments, yield) <-
+        try (braces retvalOnly)
+        <|> try (braces $ do
             maybeOutSignal <- optionMaybe (try $ identifier <* semicolon)
             assignments <- assign `sepBy` comma
-            pure (maybeOutSignal, assignments)
+            pure (maybeOutSignal, assignments, False)
         ) <|> try (braces $ do
           assignments <- many (assign <* semicolon)
           maybeOutSignal <- optionMaybe (reserved "return" *> atom <* semicolon)
-          pure (maybeOutSignal, assignments)
+          pure (maybeOutSignal, assignments, False)
+        ) <|> try (braces $ do
+          reserved "yield" <* semicolon  -- TODO(hator): make it show better error message when semicolon is missing
+          pure (Nothing, [], True)
         )
 
-    return $ Transition message pred ndParams maybeOutSignal assignments
+    return $ if yield
+        then Yield message pred
+        else Transition message pred ndParams maybeOutSignal assignments
   where
-    retvalOnly = flip (,) [] . Just <$> identifier
+    retvalOnly = do
+        retVal <- identifier
+        pure (Just retVal, [], False)
 
 formalParam = (,) <$> identifier <*> (reservedOp ":" *> typ)
 
