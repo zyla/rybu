@@ -25,4 +25,4 @@ Po czym plik `kolos.dedan.txt` należy załadować do programu Dedan.
 
 ## Kontakt
 
-Pytania można zadać na kanale [#rybu na freenode](https://webchat.freenode.net/?channels=rybu)
+Pytania można zadawać przez otworzenie Issue na Githubie z tagiem `question`, a także na kanale [#rybu na freenode](https://webchat.freenode.net/?channels=rybu)
