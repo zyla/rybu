@@ -42,7 +42,7 @@ compileServer env serversUsage server@Server{..} =
         compileTransition :: Transition -> EM [ServerAction]
         compileTransition (Transition msgSig pred ndParamsE maybeOutSignal assignment) =
           fmap (concat . concat) $ withContext ("in action " ++ ms_name msgSig) $ do
-            params <- traverse (\(name, typeE) -> (,) name <$> evalType serverEnv typeE) (ms_params msgSig)
+            params <- traverseEnv (evalType serverEnv) (ms_params msgSig)
 
             forM (allStates params) $ \paramValues -> do
                 let paramsEnv = M.fromList paramValues `M.union` serverEnv
@@ -52,7 +52,7 @@ compileServer env serversUsage server@Server{..} =
                 forM states $ \state -> withContext ("for state " ++ ppEnv state) $ do
                     let stateEnv = state `M.union` paramsEnv
 
-                    ndParams <- traverse (\(name, typeE) -> (,) name <$> evalType stateEnv typeE) ndParamsE
+                    ndParams <- traverseEnv (evalType stateEnv) ndParamsE
 
                     forM (allStates ndParams) $ \ndParamValues -> do
                         let env = M.fromList ndParamValues `M.union` stateEnv
@@ -106,6 +106,9 @@ compileServer env serversUsage server@Server{..} =
         }
     where
        getUsedBy serversUsage server_name = maybe [] id $ M.lookup server_name serversUsage
+
+traverseEnv :: Applicative f => (a -> f b) -> [(k, a)] -> f [(k, b)]
+traverseEnv = traverse . traverse
 
 listSet :: Int -> a -> [a] -> [a]
 listSet 0 x (_:xs) = x:xs
