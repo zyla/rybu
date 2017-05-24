@@ -1,4 +1,10 @@
-module CompileServer where
+module CompileServer (
+    compileServer
+  , CompiledServer(..)
+  , ServerAction(..)
+  , ServersUsage
+  , encodeState
+) where
 
 import Control.Monad
 import qualified Control.Monad.State as MS
@@ -94,7 +100,7 @@ compileServer env serversUsage server@Server{..} =
         compileTransition (Yield _ _) = pure []  -- NOTE(hator): Yield signal does not generate any IMDS action
 
     actions <- concat <$> mapM compileTransition server_transitions
-    compiled_vars <- sequence $ map (\(s, _) -> lookupType s typeEnv >>= \t -> return (s, t)) server_vars
+    compiled_vars <- traverse (\(s, _) -> lookupType s typeEnv >>= \t -> return (s, t)) server_vars
 
     pure CompiledServer
         { cs_name = server_name
@@ -119,6 +125,9 @@ typeValues (Enum values) = map Sym values
 typeValues (Range from to) = map Int [from..to]
 typeValues (Array elemType size) = map Arr $ traverse typeValues (replicate (fromIntegral size) elemType)
 
+-- | Encode a server state as a valid Dedan symbol.
+--
+-- The input must be sorted.
 encodeState :: [(Symbol, Value)] -> Symbol
 encodeState = intercalate "_" . map (\(name, val) -> name ++ "_" ++ encodeValue val)
 

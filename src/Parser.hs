@@ -1,5 +1,18 @@
 module Parser (
-    module Parser
+  -- * Main interface
+    parseModel
+
+  -- * Specific parsers
+  , Parser
+  , model
+  , process
+  , server
+  , expr
+  , predicate
+  , typ
+  , whiteSpace
+
+  -- * Reexports for convenience
   , Text.Parsec.parse
 ) where
 
@@ -11,11 +24,15 @@ import Text.Parsec.Expr (buildExpressionParser, Assoc(..), Operator(..))
 
 import AST
 
+type Parser = Parsec String ()
+
+whiteSpace :: Parser ()
 T.TokenParser {..} = T.makeTokenParser L.haskellDef
     { T.reservedNames = [ "server", "process", "thread", "var", "loop", "match", "return", "yield" ] }
 
 semicolon = reservedOp ";"
 
+server :: Parser Server
 server = do
     reserved "server"
     name <- identifier
@@ -30,6 +47,7 @@ var = (,)
     <$> (reserved "var" *> identifier)
     <*> (colon *> typ)
 
+typ :: Parser TypeExpr
 typ = simpleType >>= arraySuffix
 
 arraySuffix t = 
@@ -73,6 +91,7 @@ formalParam = (,) <$> identifier <*> (reservedOp ":" *> typ)
 
 messageSig = MessageSig <$> identifier <*> option [] (parens $ formalParam `sepBy` comma)
 
+predicate :: Parser Predicate
 predicate = buildExpressionParser
     [ [Infix (reservedOp "||" *> pure Or) AssocLeft]
     , [Infix (reservedOp "&&" *> pure And) AssocLeft]
@@ -100,6 +119,7 @@ additiveOp =
 multiplicativeOp =
       pure Modulo <* reservedOp "%"
 
+expr :: Parser Expr
 expr = buildExpressionParser table term <?> "expression"
 table =
     [ [Postfix arrayIndexOrSlice]
@@ -132,6 +152,7 @@ arrayIndexOrSlice = brackets $ do
         pure (\arrayE -> ArraySlice arrayE index1 index2)
      ) <|> pure (\arrayE -> ArrayIndex arrayE index1)
 
+model :: Parser Model
 model = Model
     <$> many globalConst
     <*> many server
@@ -150,6 +171,7 @@ serverInstance = ServerInstance
 
 initialState = braces (((,) <$> identifier <*> (reservedOp "=" *> expr)) `sepBy` comma)
 
+process :: Parser Process
 process =
   Process
     <$> (threadKeyword *> identifier <* parens (pure ()))
@@ -173,4 +195,5 @@ message = Message
     <*> (reservedOp "." *> identifier)
     <*> parens (expr `sepBy` comma)
 
+-- | Parse a Rybu file.
 parseModel = parse (whiteSpace *> model <* eof)
