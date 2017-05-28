@@ -89,7 +89,7 @@ spec = describe "compileServer" $ do
         |]
 
         let expected = for [1..3] $ \index ->
-                ServerAction "set" "val_1" "ok" ("val_" ++ show index) 
+                ServerAction "set" "val_1" "ok" ("val_" ++ show index)
 
         assertEqual "" expected cs_actions
 
@@ -154,6 +154,21 @@ spec = describe "compileServer" $ do
         |]
 
         let expected = [ServerAction "decrement" "count_1" "ok" "count_0"]
+        assertEqual "" expected cs_actions
+
+    it "should handle logic operator precedence" $ do
+        let CompiledServer{..} = compileServer' [r|
+            server logic {
+                var x: {A, B};
+                var y: {C, D};
+                { action | x == :A && y == :D || x == :B && y == :C } ->
+                    { x = :B }
+            }
+        |]
+
+        let expected = [ ServerAction "action" "x_A_y_D" "ok" "x_B_y_D"
+                       , ServerAction "action" "x_B_y_C" "ok" "x_B_y_C"
+                       ]
         assertEqual "" expected cs_actions
 
 for = flip map

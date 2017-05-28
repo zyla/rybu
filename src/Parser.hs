@@ -93,8 +93,8 @@ messageSig = MessageSig <$> identifier <*> option [] (parens $ formalParam `sepB
 
 predicate :: Parser Predicate
 predicate = buildExpressionParser
-    [ [Infix (reservedOp "||" *> pure Or) AssocLeft]
-    , [Infix (reservedOp "&&" *> pure And) AssocLeft]
+    [ [Infix (reservedOp "&&" *> pure And) AssocLeft]
+    , [Infix (reservedOp "||" *> pure Or) AssocLeft]
     ] cmpExpr
 
 cmpExpr = Cmp <$> expr <*> cmpOp <*> expr
