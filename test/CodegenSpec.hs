@@ -97,6 +97,67 @@ spec =
                         }.
                     |]
 
+        it "should only generate server actions for threads that use them" $ do
+            shouldWork
+                [r|
+                    server test {
+                        var a: { unit };
+                        { x } -> { return :foobar; }
+                        { y } -> { return :ok; }
+                    }
+                    var s = test() { a = :unit };
+                    process p1() {
+                        loop {
+                            match s.x() {
+                                :foobar => s.y();
+                            }
+                        }
+                    }
+                    process p2() {
+                        loop {
+                            s.y();
+                        }
+                    }
+                |]
+                [r|
+                    server: test (servers S_p1, S_p2; agents A_p1, A_p2),
+                    services {x, y},
+                    states {a_unit},
+                    actions {
+                      {A_p1.test.x, test.a_unit} -> {A_p1.S_p1.foobar, test.a_unit},
+                      {A_p1.test.y, test.a_unit} -> {A_p1.S_p1.ok, test.a_unit},
+                      {A_p2.test.y, test.a_unit} -> {A_p2.S_p2.ok, test.a_unit},
+                    };
+
+                    server: S_p1 (servers s: test; agents A_p1),
+                    services {foobar, ok},
+                    states {s0_s_x, s2_s_y},
+                    actions {
+                      {A_p1.S_p1.foobar, S_p1.s0_s_x} -> {A_p1.s.y, S_p1.s2_s_y},
+                      {A_p1.S_p1.ok, S_p1.s2_s_y} -> {A_p1.s.x, S_p1.s0_s_x},
+                    };
+
+                    server: S_p2 (servers s: test; agents A_p2),
+                    services {ok},
+                    states {s0_s_y},
+                    actions {
+                      {A_p2.S_p2.ok, S_p2.s0_s_y} -> {A_p2.s.y, S_p2.s0_s_y},
+                    };
+
+                    agents A_p1, A_p2;
+
+                    servers S_p1, S_p2, s: test;
+
+                    init -> {
+                      s(S_p1,S_p2,A_p1,A_p2).a_unit,
+                      S_p1(s,A_p1).s0_s_x,
+                      A_p1.s.x,
+                      S_p2(s,A_p2).s0_s_y,
+                      A_p2.s.y,
+                    }.
+                |]
+
+
 
 shouldFail source err =
     let model = unsafeParse Parser.model source

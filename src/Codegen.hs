@@ -4,7 +4,7 @@ import Control.Monad.Writer
 import qualified Control.Monad.State as MS
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Data.List (intercalate, nub, sortBy)
+import Data.List (intercalate, nub, sortBy, find)
 
 import AST
 import Err
@@ -39,12 +39,19 @@ generateDedan Model{..} = execWriterT $ do
 
         -- TODO(hator): warn if cs_usedBy is 0, means server is not used by any process
         forM_ cs_usedBy $ \procName ->
-            forM_ cs_actions $ \ServerAction
-                    {sa_inMessage=in_msg, sa_inState=in_state, sa_outMessage=out_msg, sa_outState=out_state} ->
-                let agent = procAgentName procName
-                    server = procServerName procName
-                in tells ["  {", agent, ".", cs_name, ".", in_msg, ", ", cs_name, ".", in_state, "} -> {"
-                         , agent, ".", server, ".", out_msg, ", ", cs_name, ".", out_state, "},\n"]
+            let proc = findProc compiledProcs procName
+                agent = procAgentName procName
+                server = procServerName procName
+            in
+                forM_ cs_actions $ \ServerAction { sa_inMessage=in_msg
+                                                 , sa_inState=in_state
+                                                 , sa_outMessage=out_msg
+                                                 , sa_outState=out_state} ->
+                    if out_msg `elem` cp_services proc
+                    then
+                        tells ["  {", agent, ".", cs_name, ".", in_msg, ", ", cs_name, ".", in_state, "} -> {"
+                             , agent, ".", server, ".", out_msg, ", ", cs_name, ".", out_state, "},\n"]
+                    else pure ()
 
         tellLn "};\n"
 
@@ -117,6 +124,12 @@ serverHeader serverName servers agents services states = do
     tell "states {"
     tell $ intercalate ", " states
     tellLn "},"
+
+findProc :: [CompiledProc] -> ProcessName -> CompiledProc
+findProc procs procName =
+    case find (\CompiledProc{..} -> cp_name == procName) procs of
+        Just proc -> proc
+        Nothing -> error "process not found in codegen, should never happen"
 
 procServerName = ("S_"++)
 procAgentName = ("A_"++)
