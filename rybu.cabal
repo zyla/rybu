@@ -1,83 +1,97 @@
+-- This file has been generated from package.yaml by hpack version 0.17.1.
+--
+-- see: https://github.com/sol/hpack
+
 name:                rybu
 version:             0.1.0.0
 synopsis:            Dedan preprocessor
 description:         Generates Dedan model from imperative code
 homepage:            http://zyla.neutrino.re/rybu/
 license:             BSD3
+license-file:        LICENSE
 author:              Maciej Bielecki
 maintainer:          mbieleck@stud.elka.pw.edu.pl
 copyright:           2016 Maciej Bielecki
 build-type:          Simple
-cabal-version:       >=1.10
+cabal-version:       >= 1.10
 
 library
-  hs-source-dirs:      src
-
-  exposed-modules:     AST
-                     , Codegen
-                     , CompileProc
-                     , CompileServer
-                     , Err
-                     , Eval
-                     , Parser
-                     , Rybu
-
-  build-depends:       base >= 4.7 && < 5
-                     , parsec
-                     , containers
-                     , mtl
-
-  default-language:    Haskell2010
-
-  default-extensions:  RecordWildCards
-                       LambdaCase
-                       TupleSections
+  hs-source-dirs:
+      src
+  exposed-modules:
+      AST
+      Codegen
+      CompileProc
+      CompileServer
+      Dedan
+      Err
+      Eval
+      Parser
+      Rybu
+  build-depends:
+      base >=4.7 && <5
+    , containers
+    , parsec
+    , mtl
+  default-language: Haskell2010
+  default-extensions: RecordWildCards LambdaCase TupleSections
 
 executable rybu
-  hs-source-dirs:      app
-  main-is:             Main.hs
-
-  build-depends:       base
-                     , rybu
-                     , containers
-
-  default-language:    Haskell2010
-
-test-suite hspec-tests
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Spec.hs
-
-  other-modules:       CodegenSpec
-                       CompileProcSpec
-                       CompileServerSpec
-                       ErrorMessagesSpec
-                       EvalSpec
-                       TestImport
-
-  build-depends:       base
-                     , rybu
-                     , hspec
-                     , HUnit
-                     , raw-strings-qq
-                     , containers
-                     , parsec
-
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  default-language:    Haskell2010
-
-  default-extensions:  TemplateHaskell, QuasiQuotes, RecordWildCards
+  hs-source-dirs:
+      app
+  default-extensions: RecordWildCards LambdaCase TupleSections
+  main-is: Main.hs
+  build-depends:
+      base >=4.7 && <5
+    , containers
+    , rybu
+  default-language: Haskell2010
 
 test-suite examples-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             ExamplesTest.hs
+  type: exitcode-stdio-1.0
+  hs-source-dirs:
+      test
+  main-is: ExamplesTest.hs
+  build-depends:
+      base >=4.7 && <5
+    , containers
+    , rybu
+    , directory
+    , process
+    , filepath
+  other-modules:
+      CodegenSpec
+      CompileProcSpec
+      CompileServerSpec
+      ErrorMessagesSpec
+      EvalSpec
+      Spec
+      TestImport
+  default-language: Haskell2010
+  default-extensions: RecordWildCards LambdaCase TupleSections
 
-  build-depends:       base
-                     , rybu
-                     , directory
-                     , process
-                     , filepath
-
-  default-language:    Haskell2010
-  default-extensions:  RecordWildCards
+test-suite hspec-tests
+  type: exitcode-stdio-1.0
+  hs-source-dirs:
+      test
+  main-is: Spec.hs
+  other-modules:
+      CodegenSpec
+      CompileProcSpec
+      CompileServerSpec
+      ErrorMessagesSpec
+      EvalSpec
+      ExamplesTest
+      TestImport
+  build-depends:
+      base >=4.7 && <5
+    , containers
+    , base
+    , rybu
+    , hspec
+    , HUnit
+    , raw-strings-qq
+    , parsec
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  default-language: Haskell2010
+  default-extensions: RecordWildCards LambdaCase TupleSections TemplateHaskell QuasiQuotes
