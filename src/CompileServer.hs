@@ -44,7 +44,7 @@ compileServer env serversUsage server@Server{..} =
             (,) name <$> evalType env typeE
 
     actions <- concat <$> mapM (compileTransition typeEnv env) server_transitions
-    compiled_vars <- traverse (\(s, _) -> lookupType s typeEnv >>= \t -> return (s, t)) server_vars
+    compiled_vars <- traverse (\(s, _) -> (s,) <$> lookupType s typeEnv) server_vars
 
     pure CompiledServer
         { cs_name = server_name
