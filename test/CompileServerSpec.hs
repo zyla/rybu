@@ -183,8 +183,4 @@ shouldFail source err =
     let server = unsafeParse Parser.server source
     in assertEqual source (Left err) $ left stripContext $ compileServer M.empty M.empty server
 
-stripContext :: Err -> Err
-stripContext (Context _ e) = stripContext e
-stripContext e = e
-
 shouldCompile source = compileServer' source `seq` (pure () :: Assertion)

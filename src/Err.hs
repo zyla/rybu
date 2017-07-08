@@ -1,4 +1,4 @@
-module Err(Err(..), err, EM, withContext, ppError) where
+module Err(Err(..), err, EM, withContext, ppError, stripContext) where
 
 import Control.Arrow (left)
 
@@ -39,6 +39,15 @@ mapError = left
 -- Left (Context "more context" (Context "in server foo" OpTypeMismatch))
 withContext :: String -> EM a -> EM a
 withContext context = mapError (Context context)
+
+-- | Remove 'Context' annotations from the error.
+--
+-- >>> stripContext (Context "more context" (Context "in server foo" OpTypeMismatch))
+-- OpTypeMismatch
+stripContext :: Err -> Err
+stripContext = \case
+  Context _ err -> stripContext err
+  err           -> err
 
 -- | Human-readable form of an error, with context.
 --
