@@ -15,6 +15,7 @@ data Err =
   | ErrCycle
   | UninitializedVariable String
   | EmptyProcess
+  | UndefinedAction String String -- ^ server, action
   | Context String Err
   deriving (Eq, Show)
 

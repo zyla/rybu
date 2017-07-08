@@ -158,6 +158,19 @@ spec =
                 |]
 
 
+        it "should check if action is defined in the server" $ do
+          shouldFail
+            [r|
+              server S {
+                  { action } -> { return :ok; }
+              }
+              var s = S () {};
+              thread T () {
+                  s.actionThatWasNotDefined();
+              }
+            |]
+            (UndefinedAction "s" "actionThatWasNotDefined")
+
 
 shouldFail source err =
     let model = unsafeParse Parser.model source
